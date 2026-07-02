@@ -242,4 +242,22 @@ describe('CreateReservationService', () => {
       cardLast4: '4242',
     });
   });
+
+  it('still throws PaymentDeclinedError when recording the declined attempt itself fails', async () => {
+    const lot = db.seedLot({ capacity: 5, hourlyRateCents: 500, status: 'active' });
+    const gateway = new FakePaymentGateway(false);
+    const declinedAttempts = new FakeDeclinedAttemptRepository(db);
+    declinedAttempts.insert = async () => {
+      throw new Error('secondary DB error');
+    };
+    const service = new CreateReservationService(
+      new FakeReservationUnitOfWork(db),
+      gateway,
+      new FakeClock(),
+      new FakePricingRuleRepository(db),
+      declinedAttempts,
+    );
+
+    await expect(service.execute(buildRequest({}, lot.id))).rejects.toThrow(PaymentDeclinedError);
+  });
 });

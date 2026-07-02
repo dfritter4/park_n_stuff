@@ -121,11 +121,17 @@ export class CreateReservationService {
       if (err instanceof PaymentDeclinedError) {
         // Recorded after the transaction has rolled back, per the plan: the
         // decline itself must not be part of the reservation's transaction.
-        await this.declinedAttempts.insert({
-          lotId: req.lotId,
-          amountCents: quotedCostCents ?? 0,
-          cardLast4: req.payment.cardNumber.slice(-4),
-        });
+        // A failure here must never replace the original PaymentDeclinedError
+        // that the caller needs to see, so it's swallowed and logged instead.
+        try {
+          await this.declinedAttempts.insert({
+            lotId: req.lotId,
+            amountCents: quotedCostCents ?? 0,
+            cardLast4: req.payment.cardNumber.slice(-4),
+          });
+        } catch (insertErr) {
+          console.error('Failed to record declined attempt', insertErr);
+        }
       }
       throw err;
     }
