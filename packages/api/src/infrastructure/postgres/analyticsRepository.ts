@@ -335,7 +335,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
          SELECT
            hours.hour_start AS hour_start,
            CASE WHEN capacity.total_capacity = 0 THEN 0
-             ELSE (COUNT(reservations.id)::numeric / capacity.total_capacity) * 100
+             ELSE (COUNT(lots.id)::numeric / capacity.total_capacity) * 100
            END AS occupancy_pct
          FROM hours
          CROSS JOIN capacity

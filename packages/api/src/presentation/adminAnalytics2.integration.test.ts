@@ -257,6 +257,49 @@ describe('admin analytics 2: heatmap, weekly-compare, lot-compare, forecast, dec
       expect(keys.size).toBe(168);
     });
 
+    it('excludes reservations on a soft-deleted lot from the fleet-wide numerator, matching the non-deleted-lots-only expectation', async () => {
+      const lotA = await insertLot({ capacity: 10 });
+      const deletedLot = await insertLot({ capacity: 10, status: 'deleted' });
+      const customer = await insertCustomer('heatmap-deleted-lot@example.com');
+      const now = new Date();
+
+      // Continuously occupies lotA across the entire 30-day lookback window, same as the
+      // "uniform occupancy" test above: 1 occupied / 10 total fleet capacity (deletedLot's
+      // capacity is excluded from the denominator) = 10%, uniformly across all 168 cells.
+      await insertReservation({
+        lotId: lotA.id,
+        customerId: customer,
+        startTime: new Date(now.getTime() - 31 * DAY_MS),
+        endTime: new Date(now.getTime() + HOUR_MS),
+        status: 'active',
+        totalCostCents: 100,
+        createdAt: now,
+      });
+      // Also continuously occupies the soft-deleted lot across the same window. Because
+      // deletedLot's capacity is excluded from the denominator, its reservation must be
+      // excluded from the numerator too — otherwise occupancy would be inflated to 20%
+      // (2 occupied / 10 capacity) instead of matching the non-deleted-lots-only 10%.
+      await insertReservation({
+        lotId: deletedLot.id,
+        customerId: customer,
+        startTime: new Date(now.getTime() - 31 * DAY_MS),
+        endTime: new Date(now.getTime() + HOUR_MS),
+        status: 'active',
+        totalCostCents: 100,
+        createdAt: now,
+      });
+
+      const token = await loginAndGetToken();
+      const res = await request(app).get('/api/admin/analytics/heatmap').set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(HeatmapResponseSchema.parse(res.body)).toBeTruthy();
+      expect(res.body.cells).toHaveLength(168);
+      for (const cell of res.body.cells) {
+        expect(cell.occupancyPct).toBeCloseTo(10, 5);
+      }
+    });
+
     it('averages a single occupied occurrence across all occurrences of that (dow,hour) in the 30-day window', async () => {
       const lotA = await insertLot({ capacity: 10 });
       await insertLot({ capacity: 10 });
