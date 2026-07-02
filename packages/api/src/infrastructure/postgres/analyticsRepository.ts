@@ -83,7 +83,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
            AND (payments.created_at AT TIME ZONE 'UTC')::date = (now() AT TIME ZONE 'UTC')::date
          GROUP BY reservations.lot_id
        ) rev ON rev.lot_id = lots.id
-       WHERE lots.status = 'active'
+       WHERE lots.status != 'deleted'
        ORDER BY lots.name`,
     );
     return result.rows.map((row) => ({
@@ -177,7 +177,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
        SELECT
          hours.hour_start AS hour_start,
          CASE WHEN capacity.total_capacity = 0 THEN 0
-           ELSE (COUNT(reservations.id)::numeric / capacity.total_capacity) * 100
+           ELSE (COUNT(lots.id)::numeric / capacity.total_capacity) * 100
          END AS occupancy_pct
        FROM hours
        CROSS JOIN capacity
@@ -185,6 +185,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
          ON reservations.status IN ('active', 'completed')
          AND reservations.start_time < hours.hour_start + interval '1 hour'
          AND reservations.end_time > hours.hour_start
+       LEFT JOIN lots ON lots.id = reservations.lot_id AND lots.status != 'deleted'
        GROUP BY hours.hour_start, capacity.total_capacity
        ORDER BY hours.hour_start`,
     );
@@ -231,13 +232,14 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
          SELECT COALESCE(SUM(capacity), 0) AS total_capacity FROM lots WHERE status != 'deleted'
        ),
        day_occupancy AS (
-         SELECT hours.hour AS hour, COUNT(reservations.id) AS occupied_count
+         SELECT hours.hour AS hour, COUNT(lots.id) AS occupied_count
          FROM hours
          CROSS JOIN bounds
          LEFT JOIN reservations
            ON reservations.status IN ('active', 'completed')
            AND reservations.start_time < bounds.day_start + (hours.hour + 1) * interval '1 hour'
            AND reservations.end_time > bounds.day_start + hours.hour * interval '1 hour'
+         LEFT JOIN lots ON lots.id = reservations.lot_id AND lots.status != 'deleted'
          GROUP BY hours.hour
        )
        SELECT

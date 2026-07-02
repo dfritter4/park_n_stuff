@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import request from 'supertest';
 import type { Express } from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { AnalyticsResponseSchema, DashboardResponseSchema, DayBreakdownResponseSchema } from '@parking/shared';
 import { createPool } from '../infrastructure/db.js';
 import { PostgresLotRepository } from '../infrastructure/postgres/lotRepository.js';
 import { PostgresReservationUnitOfWork } from '../infrastructure/postgres/reservationUnitOfWork.js';
@@ -232,16 +233,39 @@ describe('admin dashboard + analytics + csv export (integration)', () => {
       expect(res.body.recentReservations).toHaveLength(4);
     });
 
-    it('excludes maintenance/deleted lots from averageOccupancyPct and the lots array', async () => {
+    it('includes maintenance lots (but excludes deleted lots) in the lots array and averageOccupancyPct', async () => {
       const active = await insertLot({ name: 'Active Lot', capacity: 5, status: 'active' });
-      await insertLot({ name: 'Maintenance Lot', capacity: 5, status: 'maintenance' });
+      const maintenance = await insertLot({ name: 'Maintenance Lot', capacity: 5, status: 'maintenance' });
       await insertLot({ name: 'Deleted Lot', capacity: 5, status: 'deleted' });
+      const customer = await insertCustomer('maintenance-dash-customer@example.com');
+      const now = new Date();
+
+      // Active-now reservation on the maintenance lot: must still be reflected in its
+      // occupancy and pulled into the fleet-wide average.
+      await insertReservation({
+        lotId: maintenance.id,
+        customerId: customer,
+        startTime: new Date(now.getTime() - 30 * 60_000),
+        endTime: new Date(now.getTime() + 30 * 60_000),
+        status: 'active',
+        totalCostCents: 400,
+        createdAt: now,
+      });
 
       const token = await loginAndGetToken();
       const res = await request(app).get('/api/admin/dashboard').set('Authorization', `Bearer ${token}`);
 
-      expect(res.body.lots).toHaveLength(1);
-      expect(res.body.lots[0].lotId).toBe(active.id);
+      expect(res.body.lots).toHaveLength(2);
+      const lots = res.body.lots as Array<{ lotId: string; occupied: number; capacity: number }>;
+      const respActive = lots.find((l) => l.lotId === active.id);
+      const respMaintenance = lots.find((l) => l.lotId === maintenance.id);
+      expect(respActive).toMatchObject({ occupied: 0, capacity: 5 });
+      expect(respMaintenance).toMatchObject({ occupied: 1, capacity: 5 });
+
+      // Mean of per-lot occupancy pct over the two non-deleted lots: (0% + 20%) / 2 = 10%.
+      expect(res.body.averageOccupancyPct).toBeCloseTo(10, 5);
+
+      expect(DashboardResponseSchema.parse(res.body)).toBeTruthy();
     });
 
     it('returns 0 averageOccupancyPct when there are no lots', async () => {
@@ -335,6 +359,7 @@ describe('admin dashboard + analytics + csv export (integration)', () => {
     it('computes hourlyOccupancy as overlapping active/completed reservations over total non-deleted capacity', async () => {
       const lotA = await insertLot({ capacity: 10 });
       const lotB = await insertLot({ capacity: 10 });
+      const deletedLot = await insertLot({ capacity: 10, status: 'deleted' });
       const customer = await insertCustomer('hourly-customer@example.com');
       const now = new Date();
 
@@ -348,14 +373,31 @@ describe('admin dashboard + analytics + csv export (integration)', () => {
         createdAt: now,
       });
 
+      // Overlapping reservation belonging to a soft-deleted lot: its capacity is already
+      // excluded from the denominator, so it must also be excluded from the numerator —
+      // otherwise it inflates occupancy for capacity that no longer exists.
+      await insertReservation({
+        lotId: deletedLot.id,
+        customerId: customer,
+        startTime: new Date(now.getTime() - 30 * 60_000),
+        endTime: new Date(now.getTime() + 30 * 60_000),
+        status: 'active',
+        totalCostCents: 100,
+        createdAt: now,
+      });
+
       const token = await loginAndGetToken();
       const res = await request(app).get('/api/admin/analytics').set('Authorization', `Bearer ${token}`);
+
+      expect(AnalyticsResponseSchema.parse(res.body)).toBeTruthy();
 
       const currentDateStr = now.toISOString().slice(0, 10);
       const currentHour = now.getUTCHours();
       const currentBucket = res.body.hourlyOccupancy.find(
         (row: { date: string; hour: number }) => row.date === currentDateStr && row.hour === currentHour,
       );
+      // Numerator counts only the lotA reservation (1), not the deleted-lot one; denominator
+      // is lotA + lotB capacity (20). The deleted lot's reservation must not appear in either.
       expect(currentBucket.occupancyPct).toBeCloseTo(5, 5); // 1 / 20 * 100
 
       const farPast = new Date(now.getTime() - 100 * HOUR_MS);
@@ -412,6 +454,7 @@ describe('admin dashboard + analytics + csv export (integration)', () => {
       const res = await request(app).get(`/api/admin/analytics/day/${dateStr}`).set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
+      expect(DayBreakdownResponseSchema.parse(res.body)).toBeTruthy();
       expect(res.body.rows).toHaveLength(24);
 
       const hour5 = res.body.rows.find((row: { hour: number }) => row.hour === 5);
@@ -420,6 +463,49 @@ describe('admin dashboard + analytics + csv export (integration)', () => {
 
       const hour0 = res.body.rows.find((row: { hour: number }) => row.hour === 0);
       expect(hour0).toMatchObject({ reservations: 0, revenueCents: 0, occupancyPct: 0 });
+    });
+
+    it('excludes reservations on soft-deleted lots from the day-breakdown occupancy numerator', async () => {
+      const lot = await insertLot({ capacity: 10 });
+      const deletedLot = await insertLot({ capacity: 10, status: 'deleted' });
+      const customer = await insertCustomer('day-deleted-customer@example.com');
+
+      const date = new Date(Date.now() - 3 * 24 * HOUR_MS);
+      const dateStr = date.toISOString().slice(0, 10);
+      const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
+      const hour5Start = new Date(dayStart.getTime() + 5 * HOUR_MS);
+
+      await insertReservation({
+        lotId: lot.id,
+        customerId: customer,
+        startTime: new Date(hour5Start.getTime() + 10 * 60_000),
+        endTime: new Date(hour5Start.getTime() + 40 * 60_000),
+        status: 'completed',
+        totalCostCents: 800,
+        createdAt: hour5Start,
+      });
+
+      // Reservation on a soft-deleted lot, overlapping only hour 5: its capacity is already
+      // excluded from the denominator (SUM(capacity) WHERE status != 'deleted'), so it must
+      // also be excluded from the occupied-count numerator.
+      await insertReservation({
+        lotId: deletedLot.id,
+        customerId: customer,
+        startTime: new Date(hour5Start.getTime() + 5 * 60_000),
+        endTime: new Date(hour5Start.getTime() + 35 * 60_000),
+        status: 'completed',
+        totalCostCents: 800,
+        createdAt: hour5Start,
+      });
+
+      const token = await loginAndGetToken();
+      const res = await request(app).get(`/api/admin/analytics/day/${dateStr}`).set('Authorization', `Bearer ${token}`);
+
+      const hour5 = res.body.rows.find((row: { hour: number }) => row.hour === 5);
+      expect(hour5.occupancyPct).toBeCloseTo(10, 5); // 1/10 * 100 — deleted lot's overlap excluded
+
+      const hour0 = res.body.rows.find((row: { hour: number }) => row.hour === 0);
+      expect(hour0.occupancyPct).toBe(0);
     });
 
     it('returns 400 VALIDATION_ERROR for a malformed date', async () => {

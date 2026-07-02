@@ -23,7 +23,7 @@ export interface DashboardRecentReservation {
 export interface DashboardData {
   revenueTodayCents: number;
   activeReservations: number;
-  /** Non-deleted, active-status lots only — also the input set for averageOccupancyPct. */
+  /** All non-deleted lots (active and maintenance) — also the input set for averageOccupancyPct. */
   lots: DashboardLotSnapshot[];
   recentReservations: DashboardRecentReservation[];
 }
