@@ -104,9 +104,9 @@ async function insertReservationBatch(
   batch.forEach((reservation, index) => {
     const reservationId = randomUUID();
 
-    const rBase = index * 11;
+    const rBase = index * 12;
     reservationValueGroups.push(
-      `($${rBase + 1},$${rBase + 2},$${rBase + 3},$${rBase + 4},$${rBase + 5},$${rBase + 6},$${rBase + 7},$${rBase + 8},$${rBase + 9},$${rBase + 10},$${rBase + 11})`,
+      `($${rBase + 1},$${rBase + 2},$${rBase + 3},$${rBase + 4},$${rBase + 5},$${rBase + 6},$${rBase + 7},$${rBase + 8},$${rBase + 9},$${rBase + 10},$${rBase + 11},$${rBase + 12})`,
     );
     reservationParams.push(
       reservationId,
@@ -120,10 +120,13 @@ async function insertReservationBatch(
       reservation.endTime,
       reservation.totalCostCents,
       reservation.status,
+      reservation.startTime,
     );
 
-    const pBase = index * 6;
-    paymentValueGroups.push(`($${pBase + 1},$${pBase + 2},$${pBase + 3},$${pBase + 4},$${pBase + 5},$${pBase + 6})`);
+    const pBase = index * 7;
+    paymentValueGroups.push(
+      `($${pBase + 1},$${pBase + 2},$${pBase + 3},$${pBase + 4},$${pBase + 5},$${pBase + 6},$${pBase + 7})`,
+    );
     paymentParams.push(
       randomUUID(),
       reservationId,
@@ -131,6 +134,7 @@ async function insertReservationBatch(
       'succeeded',
       reservation.payment.transactionId,
       reservation.payment.cardLast4,
+      reservation.startTime,
     );
 
     batchRevenueCents += reservation.payment.amountCents;
@@ -138,12 +142,12 @@ async function insertReservationBatch(
 
   await pool.query(
     `INSERT INTO reservations
-       (id, reservation_number, lot_id, customer_id, vehicle_make, vehicle_model, license_plate, start_time, end_time, total_cost_cents, status)
+       (id, reservation_number, lot_id, customer_id, vehicle_make, vehicle_model, license_plate, start_time, end_time, total_cost_cents, status, created_at)
      VALUES ${reservationValueGroups.join(', ')}`,
     reservationParams,
   );
   await pool.query(
-    `INSERT INTO payments (id, reservation_id, amount_cents, status, transaction_id, card_last4)
+    `INSERT INTO payments (id, reservation_id, amount_cents, status, transaction_id, card_last4, created_at)
      VALUES ${paymentValueGroups.join(', ')}`,
     paymentParams,
   );

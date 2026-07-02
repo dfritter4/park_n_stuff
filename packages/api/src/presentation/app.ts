@@ -26,6 +26,7 @@ export interface AppDeps {
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+  app.set('trust proxy', 1);
 
   app.use(helmet());
   app.use(cors({ origin: deps.corsOrigins && deps.corsOrigins.length > 0 ? deps.corsOrigins : false }));
