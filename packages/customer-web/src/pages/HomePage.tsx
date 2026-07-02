@@ -51,8 +51,14 @@ export function HomePage() {
     <div className="home-page">
       <header className="home-header">
         <h1>Park N Stuff</h1>
-        <SearchBar onSearch={handleSearch} isSearching={isGeocoding} />
       </header>
+
+      <div className="map-shell">
+        <div className="search-bar-floating">
+          <SearchBar onSearch={handleSearch} isSearching={isGeocoding} />
+        </div>
+        <LotMap center={origin} lots={lotsQuery.data ?? []} />
+      </div>
 
       {searchError && (
         <p className="search-error" role="alert">
@@ -65,10 +71,16 @@ export function HomePage() {
         </p>
       )}
 
-      <LotMap center={origin} lots={lotsQuery.data ?? []} />
-
       <main className="lot-results">
-        {lotsQuery.isLoading && <p>Loading lots…</p>}
+        <h2 className="lot-results-heading">Parking near you</h2>
+        {lotsQuery.isLoading && (
+          <div className="skeleton-list" aria-hidden="true">
+            <div className="skeleton skeleton-lot-card" />
+            <div className="skeleton skeleton-lot-card" />
+            <div className="skeleton skeleton-lot-card" />
+          </div>
+        )}
+        {lotsQuery.isLoading && <span className="sr-only" role="status">Loading lots…</span>}
         {lotsQuery.isError && (
           <p role="alert">Could not load parking lots. Try again.</p>
         )}

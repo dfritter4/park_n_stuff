@@ -21,7 +21,11 @@ export function LotDetailPage() {
   if (lotQuery.isLoading) {
     return (
       <div className="lot-detail-page">
-        <p>Loading…</p>
+        <span className="sr-only" role="status">Loading…</span>
+        <div className="skeleton skeleton-line skeleton-line-short" aria-hidden="true" />
+        <div className="skeleton skeleton-line-title skeleton-line" aria-hidden="true" />
+        <div className="skeleton skeleton-line skeleton-line-short" aria-hidden="true" />
+        <div className="skeleton skeleton-block" aria-hidden="true" />
       </div>
     );
   }

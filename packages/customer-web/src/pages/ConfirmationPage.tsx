@@ -23,7 +23,10 @@ export function ConfirmationPage() {
   if (reservationQuery.isLoading) {
     return (
       <div className="confirmation-page">
-        <p>Loading your confirmation…</p>
+        <span className="sr-only" role="status">Loading your confirmation…</span>
+        <div className="skeleton skeleton-line-title skeleton-line" style={{ margin: '0 auto 1rem' }} aria-hidden="true" />
+        <div className="skeleton skeleton-block" style={{ width: 180, margin: '0 auto 1.25rem' }} aria-hidden="true" />
+        <div className="skeleton skeleton-block" aria-hidden="true" />
       </div>
     );
   }
@@ -42,10 +45,16 @@ export function ConfirmationPage() {
 
   return (
     <div className="confirmation-page">
+      <div className="confirmation-badge" aria-hidden="true">
+        ✓
+      </div>
       <h1>You&apos;re all set!</h1>
+      <p className="confirmation-subtitle">Show this at the lot, or keep it for your records.</p>
 
       <p className="confirmation-number">{reservation.reservationNumber}</p>
-      <QRCodeSVG value={reservation.reservationNumber} size={180} />
+      <div className="confirmation-qr">
+        <QRCodeSVG value={reservation.reservationNumber} size={180} />
+      </div>
 
       <div className="confirmation-details">
         <h2>{reservation.lotName}</h2>

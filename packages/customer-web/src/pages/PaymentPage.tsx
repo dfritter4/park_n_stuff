@@ -162,80 +162,82 @@ export function PaymentPage() {
         </p>
       )}
 
-      <form onSubmit={handleSubmit} noValidate>
-        <label className="form-field">
-          Card number
-          <input
-            inputMode="numeric"
-            autoComplete="cc-number"
-            value={formatCardNumber(form.cardNumber)}
-            onChange={(event) => updateField('cardNumber', event.target.value.replace(/\D/g, ''))}
-            onBlur={() => markTouched('cardNumber')}
-            disabled={isSubmitting}
-          />
-        </label>
-        {shouldShowError('cardNumber') && (
-          <p role="alert" className="field-error">
-            {errors.cardNumber}
-          </p>
-        )}
+      <div className="payment-card-panel">
+        <form onSubmit={handleSubmit} noValidate>
+          <label className="form-field">
+            Card number
+            <input
+              inputMode="numeric"
+              autoComplete="cc-number"
+              value={formatCardNumber(form.cardNumber)}
+              onChange={(event) => updateField('cardNumber', event.target.value.replace(/\D/g, ''))}
+              onBlur={() => markTouched('cardNumber')}
+              disabled={isSubmitting}
+            />
+          </label>
+          {shouldShowError('cardNumber') && (
+            <p role="alert" className="field-error">
+              {errors.cardNumber}
+            </p>
+          )}
 
-        <label className="form-field">
-          Expiry (MM/YY)
-          <input
-            inputMode="numeric"
-            autoComplete="cc-exp"
-            placeholder="MM/YY"
-            value={form.expiry}
-            onChange={(event) => updateField('expiry', event.target.value)}
-            onBlur={() => markTouched('expiry')}
-            disabled={isSubmitting}
-          />
-        </label>
-        {shouldShowError('expiry') && (
-          <p role="alert" className="field-error">
-            {errors.expiry}
-          </p>
-        )}
+          <label className="form-field">
+            Expiry (MM/YY)
+            <input
+              inputMode="numeric"
+              autoComplete="cc-exp"
+              placeholder="MM/YY"
+              value={form.expiry}
+              onChange={(event) => updateField('expiry', event.target.value)}
+              onBlur={() => markTouched('expiry')}
+              disabled={isSubmitting}
+            />
+          </label>
+          {shouldShowError('expiry') && (
+            <p role="alert" className="field-error">
+              {errors.expiry}
+            </p>
+          )}
 
-        <label className="form-field">
-          CVC
-          <input
-            inputMode="numeric"
-            autoComplete="cc-csc"
-            value={form.cvc}
-            onChange={(event) => updateField('cvc', event.target.value)}
-            onBlur={() => markTouched('cvc')}
-            disabled={isSubmitting}
-          />
-        </label>
-        {shouldShowError('cvc') && (
-          <p role="alert" className="field-error">
-            {errors.cvc}
-          </p>
-        )}
+          <label className="form-field">
+            CVC
+            <input
+              inputMode="numeric"
+              autoComplete="cc-csc"
+              value={form.cvc}
+              onChange={(event) => updateField('cvc', event.target.value)}
+              onBlur={() => markTouched('cvc')}
+              disabled={isSubmitting}
+            />
+          </label>
+          {shouldShowError('cvc') && (
+            <p role="alert" className="field-error">
+              {errors.cvc}
+            </p>
+          )}
 
-        <label className="form-field">
-          Cardholder name
-          <input
-            autoComplete="cc-name"
-            value={form.cardholderName}
-            onChange={(event) => updateField('cardholderName', event.target.value)}
-            onBlur={() => markTouched('cardholderName')}
-            disabled={isSubmitting}
-          />
-        </label>
-        {shouldShowError('cardholderName') && (
-          <p role="alert" className="field-error">
-            {errors.cardholderName}
-          </p>
-        )}
+          <label className="form-field">
+            Cardholder name
+            <input
+              autoComplete="cc-name"
+              value={form.cardholderName}
+              onChange={(event) => updateField('cardholderName', event.target.value)}
+              onBlur={() => markTouched('cardholderName')}
+              disabled={isSubmitting}
+            />
+          </label>
+          {shouldShowError('cardholderName') && (
+            <p role="alert" className="field-error">
+              {errors.cardholderName}
+            </p>
+          )}
 
-        <button type="submit" className="payment-submit-button" disabled={isSubmitting}>
-          {isSubmitting && <span className="spinner" aria-hidden="true" />}
-          {isSubmitting ? 'Processing…' : `Pay $${(costCents / 100).toFixed(2)}`}
-        </button>
-      </form>
+          <button type="submit" className="payment-submit-button" disabled={isSubmitting}>
+            {isSubmitting && <span className="spinner" aria-hidden="true" />}
+            {isSubmitting ? 'Processing…' : `Pay $${(costCents / 100).toFixed(2)}`}
+          </button>
+        </form>
+      </div>
 
       <p className="payment-small-print">
         Demo: card ending 0002 always declines. Try 4242 4242 4240 0002.
