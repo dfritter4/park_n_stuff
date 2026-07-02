@@ -1,10 +1,7 @@
 import type { Pool } from 'pg';
+import type { AdminUserRecord, AdminUserRepository } from '../../application/ports.js';
 
-export interface AdminUserRecord {
-  id: string;
-  email: string;
-  passwordHash: string;
-}
+export type { AdminUserRecord };
 
 interface AdminUserRow {
   id: string;
@@ -16,7 +13,7 @@ function mapAdminUserRow(row: AdminUserRow): AdminUserRecord {
   return { id: row.id, email: row.email, passwordHash: row.password_hash };
 }
 
-export class PostgresAdminUserRepository {
+export class PostgresAdminUserRepository implements AdminUserRepository {
   constructor(private readonly pool: Pool) {}
 
   async findByEmail(email: string): Promise<AdminUserRecord | null> {

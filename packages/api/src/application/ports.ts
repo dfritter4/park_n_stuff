@@ -56,6 +56,15 @@ export interface ReservationRepository {
     (ReservationRecord & { lotName: string; lotAddress: string; customerName: string; cardLast4: string }) | null
   >;
 }
+export interface AdminUserRecord {
+  id: string;
+  email: string;
+  passwordHash: string;
+}
+export interface AdminUserRepository {
+  findByEmail(email: string): Promise<AdminUserRecord | null>;
+  create(email: string, passwordHash: string): Promise<AdminUserRecord>;
+}
 export interface PaymentGateway {
   charge(input: { cardNumber: string; amountCents: number }): Promise<{ success: boolean; transactionId: string }>;
 }

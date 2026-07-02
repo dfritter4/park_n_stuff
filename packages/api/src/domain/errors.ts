@@ -44,3 +44,9 @@ export class ValidationError extends DomainError {
     super('VALIDATION_ERROR', message, 400);
   }
 }
+
+export class ReservationNotFoundError extends DomainError {
+  constructor(message = 'Reservation not found') {
+    super('RESERVATION_NOT_FOUND', message, 404);
+  }
+}
