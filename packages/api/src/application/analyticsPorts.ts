@@ -61,6 +61,62 @@ export interface ExportReservationRow {
   createdAt: Date;
 }
 
+export interface HeatmapCell {
+  /** UTC day of week, 0=Sunday. */
+  dow: number;
+  /** UTC hour of day, 0-23. */
+  hour: number;
+  occupancyPct: number;
+}
+
+export interface WeekDayPoint {
+  /** UTC date, YYYY-MM-DD. */
+  date: string;
+  revenueCents: number;
+  reservations: number;
+}
+
+export interface WeeklyCompareData {
+  thisWeek: WeekDayPoint[];
+  lastWeek: WeekDayPoint[];
+}
+
+export interface LotCompareRow {
+  lotId: string;
+  name: string;
+  revenueCents: number;
+  reservations: number;
+  avgOccupancyPct: number;
+}
+
+export interface ForecastPoint {
+  /** UTC date, YYYY-MM-DD. */
+  date: string;
+  /** UTC hour of day, 0-23. */
+  hour: number;
+  projectedOccupancyPct: number;
+}
+
+export interface DeclineDayPoint {
+  /** UTC date, YYYY-MM-DD. */
+  date: string;
+  count: number;
+  amountCents: number;
+}
+
+export interface RecentDecline {
+  lotName: string;
+  amountCents: number;
+  cardLast4: string;
+  createdAt: Date;
+}
+
+export interface DeclinesData {
+  total: number;
+  byDay: DeclineDayPoint[];
+  recent: RecentDecline[];
+}
+
 export interface AnalyticsRepository {
   getDashboardData(): Promise<DashboardData>;
   /** Last `days` UTC days (inclusive of today), gap-free. */
@@ -71,4 +127,19 @@ export interface AnalyticsRepository {
   getDayBreakdown(date: string): Promise<DayBreakdownRow[]>;
   /** All reservations (any status), for CSV export. */
   getExportRows(): Promise<ExportReservationRow[]>;
+  /**
+   * Mean occupancy per (UTC dow, UTC hour) over the last 30 days, 168 gap-free
+   * cells. When `lotId` is null the denominator is total non-deleted lot
+   * capacity and the numerator excludes deleted-lot reservations; when set,
+   * the denominator is that lot's capacity and the numerator is scoped to it.
+   */
+  getHeatmap(lotId: string | null): Promise<HeatmapCell[]>;
+  /** Last 7 full UTC days vs. the 7 UTC days before that (today excluded), gap-free. */
+  getWeeklyCompare(): Promise<WeeklyCompareData>;
+  /** Per non-deleted lot: revenue/reservations over the last `days` days, avg occupancy over the same window. */
+  getLotCompare(days: number): Promise<LotCompareRow[]>;
+  /** Next 7 UTC dates x 24h = 168 gap-free points for `lotId`, projected from the last-30-days (dow, hour) means. */
+  getForecast(lotId: string): Promise<ForecastPoint[]>;
+  /** Decline totals/by-day over the last `days` days, plus the 50 most recent declines overall. */
+  getDeclines(days: number): Promise<DeclinesData>;
 }

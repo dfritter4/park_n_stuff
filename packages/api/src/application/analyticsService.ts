@@ -1,4 +1,13 @@
-import type { AnalyticsResponse, DashboardResponse, DayBreakdownResponse } from '@parking/shared';
+import type {
+  AnalyticsResponse,
+  DashboardResponse,
+  DayBreakdownResponse,
+  DeclinesResponse,
+  ForecastResponse,
+  HeatmapResponse,
+  LotCompareResponse,
+  WeeklyCompareResponse,
+} from '@parking/shared';
 import type { AnalyticsRepository, ExportReservationRow } from './analyticsPorts.js';
 
 const CSV_HEADER = 'reservation_number,lot_name,start_time,end_time,status,total_cost_usd,created_at';
@@ -80,5 +89,38 @@ export class AnalyticsService {
     const rows = await this.repository.getExportRows();
     const lines = [CSV_HEADER, ...rows.map(toCsvRow)];
     return lines.join('\r\n') + '\r\n';
+  }
+
+  async getHeatmap(lotId?: string): Promise<HeatmapResponse> {
+    const cells = await this.repository.getHeatmap(lotId ?? null);
+    return { cells };
+  }
+
+  async getWeeklyCompare(): Promise<WeeklyCompareResponse> {
+    return this.repository.getWeeklyCompare();
+  }
+
+  async getLotCompare(days: number): Promise<LotCompareResponse> {
+    const rows = await this.repository.getLotCompare(days);
+    return { rows };
+  }
+
+  async getForecast(lotId: string): Promise<ForecastResponse> {
+    const points = await this.repository.getForecast(lotId);
+    return { points };
+  }
+
+  async getDeclines(days: number): Promise<DeclinesResponse> {
+    const data = await this.repository.getDeclines(days);
+    return {
+      total: data.total,
+      byDay: data.byDay,
+      recent: data.recent.map((decline) => ({
+        lotName: decline.lotName,
+        amountCents: decline.amountCents,
+        cardLast4: decline.cardLast4,
+        createdAt: decline.createdAt.toISOString(),
+      })),
+    };
   }
 }
