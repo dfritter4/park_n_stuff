@@ -40,7 +40,10 @@ exports.up = (pgm) => {
     name: { type: 'text' },
     email: { type: 'text', unique: true },
     phone: { type: 'text' },
-    created_at: { type: 'timestamptz' },
+    created_at: {
+      type: 'timestamptz',
+      default: pgm.func('now()'),
+    },
   });
 
   pgm.createTable('admin_users', {
@@ -51,7 +54,10 @@ exports.up = (pgm) => {
     },
     email: { type: 'text', unique: true },
     password_hash: { type: 'text' },
-    created_at: { type: 'timestamptz' },
+    created_at: {
+      type: 'timestamptz',
+      default: pgm.func('now()'),
+    },
   });
 
   pgm.createTable('reservations', {
