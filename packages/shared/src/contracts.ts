@@ -292,7 +292,7 @@ export const CapacityOverrideSchema = z.object({
   id: z.string().uuid(),
   lotId: z.string().uuid(),
   spacesClosed: z.number().int().positive(),
-  reason: z.string(),
+  reason: z.string().nullable(),
   startsAt: z.string(),
   endsAt: z.string().nullable(),
   createdAt: z.string(),

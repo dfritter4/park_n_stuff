@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { calculateCostCents, calculateWindowCostCents, rateForHour, type HourlyRateRule } from './pricing.js';
+import {
+  calculateCostCents,
+  calculateWindowCostCents,
+  pricingRulesOverlap,
+  rateForHour,
+  type HourlyRateRule,
+} from './pricing.js';
 import { ValidationError } from './errors.js';
 
 describe('calculateCostCents', () => {
@@ -167,5 +173,55 @@ describe('calculateWindowCostCents', () => {
     const start = new Date('2026-07-02T10:00:00Z');
     const end = new Date('2026-07-02T09:00:00Z');
     expect(() => calculateWindowCostCents(1000, [], start, end)).toThrow(ValidationError);
+  });
+});
+
+describe('pricingRulesOverlap', () => {
+  it('conflicts when the same dayType has intersecting hour ranges', () => {
+    const a = { dayType: 'weekday' as const, startHour: 8, endHour: 12 };
+    const b = { dayType: 'weekday' as const, startHour: 10, endHour: 14 };
+    expect(pricingRulesOverlap(a, b)).toBe(true);
+  });
+
+  it('does not conflict when the same dayType has disjoint hour ranges', () => {
+    const a = { dayType: 'weekday' as const, startHour: 8, endHour: 12 };
+    const b = { dayType: 'weekday' as const, startHour: 12, endHour: 14 };
+    expect(pricingRulesOverlap(a, b)).toBe(false);
+  });
+
+  it('does not conflict when hour ranges only touch at the boundary (endHour == startHour)', () => {
+    const a = { dayType: 'all' as const, startHour: 8, endHour: 12 };
+    const b = { dayType: 'all' as const, startHour: 12, endHour: 18 };
+    expect(pricingRulesOverlap(a, b)).toBe(false);
+  });
+
+  it('conflicts when one rule is "all" and the other is "weekday" with intersecting hours', () => {
+    const a = { dayType: 'all' as const, startHour: 6, endHour: 10 };
+    const b = { dayType: 'weekday' as const, startHour: 8, endHour: 20 };
+    expect(pricingRulesOverlap(a, b)).toBe(true);
+  });
+
+  it('conflicts when one rule is "all" and the other is "weekend" with intersecting hours', () => {
+    const a = { dayType: 'weekend' as const, startHour: 17, endHour: 24 };
+    const b = { dayType: 'all' as const, startHour: 20, endHour: 22 };
+    expect(pricingRulesOverlap(a, b)).toBe(true);
+  });
+
+  it('does not conflict between "weekday" and "weekend" even with identical hours', () => {
+    const a = { dayType: 'weekday' as const, startHour: 8, endHour: 12 };
+    const b = { dayType: 'weekend' as const, startHour: 8, endHour: 12 };
+    expect(pricingRulesOverlap(a, b)).toBe(false);
+  });
+
+  it('conflicts when two "all" rules have intersecting hours', () => {
+    const a = { dayType: 'all' as const, startHour: 0, endHour: 24 };
+    const b = { dayType: 'all' as const, startHour: 23, endHour: 24 };
+    expect(pricingRulesOverlap(a, b)).toBe(true);
+  });
+
+  it('is symmetric (order of arguments does not matter)', () => {
+    const a = { dayType: 'all' as const, startHour: 6, endHour: 10 };
+    const b = { dayType: 'weekday' as const, startHour: 8, endHour: 20 };
+    expect(pricingRulesOverlap(a, b)).toBe(pricingRulesOverlap(b, a));
   });
 });

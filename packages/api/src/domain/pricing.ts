@@ -78,3 +78,22 @@ export function calculateWindowCostCents(
   }
   return total;
 }
+
+/**
+ * Whether two pricing-rule windows conflict if both existed for the same
+ * lot: their [startHour, endHour) ranges intersect and their dayTypes
+ * aren't disjoint. Same dayType always conflicts; either side being 'all'
+ * also conflicts since 'all' matches every day and so overlaps any
+ * day-specific rule covering the same hours. 'weekday' vs 'weekend' never
+ * conflicts since no calendar day is both. Pure hour/dayType check — the
+ * caller compares a candidate rule against a lot's existing rules one at a
+ * time (lot scoping happens outside this function).
+ */
+export function pricingRulesOverlap(
+  a: Pick<HourlyRateRule, 'dayType' | 'startHour' | 'endHour'>,
+  b: Pick<HourlyRateRule, 'dayType' | 'startHour' | 'endHour'>,
+): boolean {
+  const dayTypesConflict = a.dayType === b.dayType || a.dayType === 'all' || b.dayType === 'all';
+  const hoursIntersect = a.startHour < b.endHour && b.startHour < a.endHour;
+  return dayTypesConflict && hoursIntersect;
+}

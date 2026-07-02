@@ -591,6 +591,10 @@ describe('CapacityOverrideSchema', () => {
   it('rejects a non-positive spacesClosed', () => {
     expect(CapacityOverrideSchema.safeParse({ ...validCapacityOverride, spacesClosed: 0 }).success).toBe(false);
   });
+
+  it('accepts a null reason (DB column is nullable)', () => {
+    expect(CapacityOverrideSchema.safeParse({ ...validCapacityOverride, reason: null }).success).toBe(true);
+  });
 });
 
 describe('CreateCapacityOverrideRequestSchema', () => {

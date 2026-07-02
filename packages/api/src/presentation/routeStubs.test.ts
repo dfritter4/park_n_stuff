@@ -23,10 +23,12 @@ import { createApp } from './app.js';
 const JWT_SECRET = 'test-secret';
 
 /**
- * These P2-phase admin routers (adminReservations, adminCustomers, lotOps)
- * are 501 stubs until their owning tasks land — this test only pins the
- * wiring (mount paths, admin gating, and the NOT_IMPLEMENTED envelope), not
- * any business behavior.
+ * These P2-phase admin routers (adminReservations, adminCustomers) are 501
+ * stubs until their owning tasks land — this test only pins the wiring
+ * (mount paths, admin gating, and the NOT_IMPLEMENTED envelope), not any
+ * business behavior. lotOps (pricing rules + capacity overrides) is no
+ * longer a stub as of P6 — see lotOps.integration.test.ts for its real
+ * behavior coverage.
  */
 function unimplementedAnalyticsRepository(): AnalyticsRepository {
   const fail = async (): Promise<never> => {
@@ -155,63 +157,6 @@ describe('phase-2 stub routers (wiring)', () => {
     it('501s POST /api/admin/customers/:id/unflag', async () => {
       const res = await request(app)
         .post('/api/admin/customers/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a/unflag')
-        .set(authed());
-      expect(res.status).toBe(501);
-    });
-  });
-
-  describe('lotOps router', () => {
-    it('501s public GET /api/lots/:id/pricing-rules without a token', async () => {
-      const res = await request(app).get('/api/lots/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a/pricing-rules');
-      expect(res.status).toBe(501);
-      expect(res.body.error.code).toBe('NOT_IMPLEMENTED');
-    });
-
-    it('401s POST /api/lots/:id/pricing-rules without a token (admin-only)', async () => {
-      const res = await request(app)
-        .post('/api/lots/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a/pricing-rules')
-        .send({ dayType: 'all', startHour: 0, endHour: 24, hourlyRateCents: 1000 });
-      expect(res.status).toBe(401);
-    });
-
-    it('501s POST /api/lots/:id/pricing-rules for an authenticated admin', async () => {
-      const res = await request(app)
-        .post('/api/lots/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a/pricing-rules')
-        .set(authed())
-        .send({ dayType: 'all', startHour: 0, endHour: 24, hourlyRateCents: 1000 });
-      expect(res.status).toBe(501);
-    });
-
-    it('501s DELETE /api/pricing-rules/:ruleId', async () => {
-      const res = await request(app)
-        .delete('/api/pricing-rules/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a')
-        .set(authed());
-      expect(res.status).toBe(501);
-    });
-
-    it('501s GET /api/lots/:id/capacity-overrides for an authenticated admin', async () => {
-      const res = await request(app)
-        .get('/api/lots/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a/capacity-overrides')
-        .set(authed());
-      expect(res.status).toBe(501);
-    });
-
-    it('401s GET /api/lots/:id/capacity-overrides without a token (admin-only)', async () => {
-      const res = await request(app).get('/api/lots/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a/capacity-overrides');
-      expect(res.status).toBe(401);
-    });
-
-    it('501s POST /api/lots/:id/capacity-overrides for an authenticated admin', async () => {
-      const res = await request(app)
-        .post('/api/lots/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a/capacity-overrides')
-        .set(authed())
-        .send({ spacesClosed: 2, reason: 'test', startsAt: '2026-07-02T00:00:00.000Z' });
-      expect(res.status).toBe(501);
-    });
-
-    it('501s DELETE /api/capacity-overrides/:id', async () => {
-      const res = await request(app)
-        .delete('/api/capacity-overrides/a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a')
         .set(authed());
       expect(res.status).toBe(501);
     });
