@@ -181,3 +181,312 @@ body {
     height: 60vh;
   }
 }
+
+/* Shared page/form primitives used by lot detail, reserve, payment, confirmation */
+
+.lot-detail-page,
+.reserve-page,
+.payment-page,
+.confirmation-page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  color: #1d4ed8;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+}
+
+fieldset legend {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #3f3f46;
+}
+
+.form-field input {
+  min-height: 44px;
+  padding: 0 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #c9c9d1;
+  border-radius: 6px;
+  color: #1a1a1a;
+}
+
+.form-field input:disabled {
+  background: #f3f3f5;
+  color: #71717a;
+}
+
+.field-error {
+  margin: -0.5rem 0 0.75rem;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+button[type='submit'],
+.reserve-button,
+.reserve-continue-button,
+.payment-submit-button {
+  width: 100%;
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #1d4ed8;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+button[type='submit']:disabled,
+.reserve-button:disabled,
+.payment-submit-button:disabled {
+  background: #93a8e8;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Lot detail */
+
+.lot-detail-name {
+  margin: 0 0 0.25rem;
+}
+
+.lot-detail-neighborhood {
+  color: #52525b;
+  margin: 0 0 0.25rem;
+}
+
+.lot-detail-address {
+  color: #3f3f46;
+  margin: 0 0 1rem;
+}
+
+.lot-detail-rate {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 1.25rem;
+}
+
+/* Capacity bar */
+
+.capacity-bar {
+  margin: 0.75rem 0;
+}
+
+.capacity-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e4e4e7;
+  overflow: hidden;
+}
+
+.capacity-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.capacity-bar-fill-green {
+  background: #16a34a;
+}
+
+.capacity-bar-fill-amber {
+  background: #d97706;
+}
+
+.capacity-bar-fill-red {
+  background: #dc2626;
+}
+
+.capacity-bar-label {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.capacity-bar-label-green {
+  color: #166534;
+}
+
+.capacity-bar-label-amber {
+  color: #92400e;
+}
+
+.capacity-bar-label-red {
+  color: #991b1b;
+}
+
+/* Duration picker */
+
+.duration-picker {
+  margin-bottom: 0.5rem;
+}
+
+.duration-picker-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.duration-preset-chip {
+  min-height: 40px;
+  padding: 0 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: #ffffff;
+  border: 1px solid #c9c9d1;
+  border-radius: 999px;
+  cursor: pointer;
+  color: #1a1a1a;
+}
+
+.duration-preset-chip-selected {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.duration-picker-custom {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.duration-picker-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: #3f3f46;
+}
+
+.duration-picker-field input {
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border: 1px solid #c9c9d1;
+  border-radius: 6px;
+}
+
+.duration-picker-cost {
+  font-size: 0.95rem;
+  color: #1a1a1a;
+}
+
+/* Payment page */
+
+.payment-summary {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.payment-declined-banner,
+.payment-error-banner,
+.payment-lot-full-message {
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.payment-declined-banner,
+.payment-error-banner {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.payment-lot-full-message {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.payment-small-print {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  color: #71717a;
+  text-align: center;
+}
+
+/* Confirmation page */
+
+.confirmation-page {
+  text-align: center;
+}
+
+.confirmation-number {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 0.5rem 0 1rem;
+}
+
+.confirmation-details {
+  margin: 1.25rem 0;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.confirmation-details h2 {
+  margin: 0 0 0.5rem;
+}
+
+.confirmation-total {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.confirmation-home-button {
+  display: inline-block;
+  margin-top: 1rem;
+  min-height: 48px;
+  line-height: 48px;
+  padding: 0 1.5rem;
+  background: #1d4ed8;
+  color: #ffffff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}

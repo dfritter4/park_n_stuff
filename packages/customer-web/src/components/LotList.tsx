@@ -1,25 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { Lot } from '@parking/shared';
+import { getAvailabilityLevel } from '../lib/availability';
 
-export type AvailabilityLevel = 'green' | 'amber' | 'red';
-
-/**
- * green: >30% of capacity free, amber: 10-30% free, red: <10% free or none
- * left at all (shown as "Full").
- */
-export function getAvailabilityLevel(availableSpaces: number, capacity: number): AvailabilityLevel {
-  if (availableSpaces <= 0 || capacity <= 0) {
-    return 'red';
-  }
-  const pctFree = availableSpaces / capacity;
-  if (pctFree > 0.3) {
-    return 'green';
-  }
-  if (pctFree >= 0.1) {
-    return 'amber';
-  }
-  return 'red';
-}
+export { getAvailabilityLevel } from '../lib/availability';
 
 function formatRate(hourlyRateCents: number): string {
   return `$${(hourlyRateCents / 100).toFixed(2)}/hr`;
