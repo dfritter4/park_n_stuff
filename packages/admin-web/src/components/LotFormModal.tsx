@@ -17,6 +17,7 @@ interface EditModeProps {
 type LotFormModalProps = (CreateModeProps | EditModeProps) & {
   onClose: () => void;
   isSubmitting: boolean;
+  errorMessage?: string | null;
 };
 
 interface FormState {
@@ -44,7 +45,7 @@ function initialState(lot: Lot | undefined): FormState {
 }
 
 export function LotFormModal(props: LotFormModalProps) {
-  const { mode, lot, onClose, isSubmitting } = props;
+  const { mode, lot, onClose, isSubmitting, errorMessage } = props;
   const [form, setForm] = useState<FormState>(() => initialState(lot));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -206,6 +207,12 @@ export function LotFormModal(props: LotFormModalProps) {
                 <option value="maintenance">Maintenance</option>
               </select>
             </div>
+          )}
+
+          {errorMessage && (
+            <p role="alert" className="form-error">
+              {errorMessage}
+            </p>
           )}
 
           <div className="modal-actions">

@@ -211,8 +211,12 @@ export function LotsPage() {
         <LotFormModal
           mode="create"
           onSubmit={handleCreateSubmit}
-          onClose={() => setModalState(null)}
+          onClose={() => {
+            createMutation.reset();
+            setModalState(null);
+          }}
           isSubmitting={createMutation.isPending}
+          errorMessage={createMutation.error?.message}
         />
       )}
 
@@ -221,8 +225,12 @@ export function LotsPage() {
           mode="edit"
           lot={modalState.lot}
           onSubmit={handleEditSubmit}
-          onClose={() => setModalState(null)}
+          onClose={() => {
+            updateMutation.reset();
+            setModalState(null);
+          }}
           isSubmitting={updateMutation.isPending}
+          errorMessage={updateMutation.error?.message}
         />
       )}
 
@@ -232,8 +240,12 @@ export function LotsPage() {
           message={`Are you sure you want to delete "${pendingAction.lot.name}"? This cannot be undone.`}
           confirmLabel="Delete"
           isConfirming={deleteMutation.isPending}
+          errorMessage={deleteMutation.error?.message}
           onConfirm={confirmPendingAction}
-          onCancel={() => setPendingAction(null)}
+          onCancel={() => {
+            deleteMutation.reset();
+            setPendingAction(null);
+          }}
         />
       )}
 
@@ -243,8 +255,12 @@ export function LotsPage() {
           message={`This will update ${pendingAction.lotIds.length} lot(s) to "${pendingAction.status}".`}
           confirmLabel="Confirm"
           isConfirming={bulkStatusMutation.isPending}
+          errorMessage={bulkStatusMutation.error?.message}
           onConfirm={confirmPendingAction}
-          onCancel={() => setPendingAction(null)}
+          onCancel={() => {
+            bulkStatusMutation.reset();
+            setPendingAction(null);
+          }}
         />
       )}
     </div>

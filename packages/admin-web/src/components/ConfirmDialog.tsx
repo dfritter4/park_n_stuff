@@ -3,6 +3,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   isConfirming?: boolean;
+  errorMessage?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -12,6 +13,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = 'Confirm',
   isConfirming = false,
+  errorMessage,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -20,6 +22,11 @@ export function ConfirmDialog({
       <div className="modal modal-confirm" role="alertdialog" aria-modal="true" aria-label={title}>
         <h2>{title}</h2>
         <p>{message}</p>
+        {errorMessage && (
+          <p role="alert" className="form-error">
+            {errorMessage}
+          </p>
+        )}
         <div className="modal-actions">
           <button type="button" onClick={onCancel} disabled={isConfirming}>
             Cancel
