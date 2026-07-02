@@ -52,8 +52,12 @@ export function clearStoredToken(): void {
  * the configured API base URL, JSON-encodes bodies, attaches the stored admin
  * JWT as a Bearer token when present, and normalizes all failure modes
  * (network failure, non-2xx with an error envelope, non-2xx without one) into
- * a single `ApiError`. A 401 response means the session is no longer valid,
- * so it clears the stored token and sends the user back to /login.
+ * a single `ApiError`. A 401 response on a request that carried a stored
+ * token means the session is no longer valid, so it clears the token and
+ * sends the user back to /login. A 401 with no stored token (e.g. a failed
+ * login attempt) is not a session expiry — it's left to the normal
+ * `ApiError` envelope path so callers like the login form can render the
+ * server's error message inline.
  */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getStoredToken();
@@ -80,7 +84,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && token) {
       clearStoredToken();
       window.location.href = '/login';
     }
@@ -101,8 +105,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 /**
  * Variant of `apiFetch` for endpoints that respond with a binary payload
  * (e.g. a CSV export) rather than JSON. Shares the same base URL, Bearer
- * token attachment, and 401 handling; on a non-2xx response it attempts to
- * parse a JSON error envelope the same way `apiFetch` does.
+ * token attachment, and 401 handling (redirect only applies when a token was
+ * present on the request); on a non-2xx response it attempts to parse a JSON
+ * error envelope the same way `apiFetch` does.
  */
 export async function apiFetchBlob(path: string, init?: RequestInit): Promise<Blob> {
   const token = getStoredToken();
@@ -121,7 +126,7 @@ export async function apiFetchBlob(path: string, init?: RequestInit): Promise<Bl
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && token) {
       clearStoredToken();
       window.location.href = '/login';
     }

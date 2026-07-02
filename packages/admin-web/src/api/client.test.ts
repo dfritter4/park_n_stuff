@@ -113,6 +113,33 @@ describe('apiFetch', () => {
       value: originalLocation,
     });
   });
+
+  it('does not clear the token or redirect on a 401 response when no token was stored (e.g. a failed login)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect email or password' } }, 401),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const originalLocation = window.location;
+    const locationStub = { ...originalLocation, href: '' };
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: locationStub,
+    });
+
+    await expect(apiFetch('/api/admin/auth/login', { method: 'POST' })).rejects.toMatchObject({
+      code: 'INVALID_CREDENTIALS',
+      status: 401,
+    });
+
+    expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(locationStub.href).toBe('');
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    });
+  });
 });
 
 describe('apiFetchBlob', () => {
@@ -151,7 +178,8 @@ describe('apiFetchBlob', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-token');
   });
 
-  it('throws an ApiError parsed from the error envelope on a failed response', async () => {
+  it('clears the stored token and redirects to /login on a 401 response when a token was stored', async () => {
+    sessionStorage.setItem(TOKEN_KEY, 'stale-token');
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'Missing or invalid admin credentials' } }, 401),
     );
@@ -184,6 +212,33 @@ describe('apiFetchBlob', () => {
 
     await expect(apiFetchBlob('/api/admin/analytics/export')).rejects.toMatchObject({
       code: 'NETWORK_ERROR',
+    });
+  });
+
+  it('does not clear the token or redirect on a 401 response when no token was stored', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'Missing or invalid admin credentials' } }, 401),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const originalLocation = window.location;
+    const locationStub = { ...originalLocation, href: '' };
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: locationStub,
+    });
+
+    await expect(apiFetchBlob('/api/admin/analytics/export')).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+      status: 401,
+    });
+
+    expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(locationStub.href).toBe('');
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
     });
   });
 });
