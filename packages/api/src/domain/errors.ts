@@ -50,3 +50,27 @@ export class ReservationNotFoundError extends DomainError {
     super('RESERVATION_NOT_FOUND', message, 404);
   }
 }
+
+export class ReservationNotActiveError extends DomainError {
+  constructor(message = 'Reservation is not active') {
+    super('RESERVATION_NOT_ACTIVE', message, 409);
+  }
+}
+
+export class CustomerFlaggedError extends DomainError {
+  constructor(message = 'Customer is flagged and cannot make new reservations') {
+    super('CUSTOMER_FLAGGED', message, 403);
+  }
+}
+
+export class InvalidExtensionError extends DomainError {
+  constructor(message = 'Invalid extension') {
+    super('INVALID_EXTENSION', message, 400);
+  }
+}
+
+export class PricingRuleOverlapError extends DomainError {
+  constructor(message = 'Pricing rule overlaps an existing rule for this lot') {
+    super('PRICING_RULE_OVERLAP', message, 409);
+  }
+}

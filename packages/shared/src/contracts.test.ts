@@ -13,6 +13,27 @@ import {
   AnalyticsResponseSchema,
   DayBreakdownResponseSchema,
   ErrorResponseSchema,
+  PaymentStatusSchema,
+  QuoteResponseSchema,
+  AdminReservationSchema,
+  AdminReservationDetailSchema,
+  AdminReservationListResponseSchema,
+  ExtendReservationRequestSchema,
+  CurrentInLotResponseSchema,
+  AdminCustomerSchema,
+  AdminCustomerListResponseSchema,
+  AdminCustomerDetailSchema,
+  FlagCustomerRequestSchema,
+  DayTypeSchema,
+  PricingRuleSchema,
+  CreatePricingRuleRequestSchema,
+  CapacityOverrideSchema,
+  CreateCapacityOverrideRequestSchema,
+  HeatmapResponseSchema,
+  WeeklyCompareResponseSchema,
+  LotCompareResponseSchema,
+  ForecastResponseSchema,
+  DeclinesResponseSchema,
 } from './contracts';
 
 const validLot = {
@@ -286,5 +307,398 @@ describe('ErrorResponseSchema', () => {
 
   it('rejects an error response missing message', () => {
     expect(ErrorResponseSchema.safeParse({ error: { code: 'NOT_FOUND' } }).success).toBe(false);
+  });
+});
+
+describe('PaymentStatusSchema', () => {
+  it('accepts succeeded, declined, refunded', () => {
+    for (const status of ['succeeded', 'declined', 'refunded']) {
+      expect(PaymentStatusSchema.safeParse(status).success).toBe(true);
+    }
+  });
+
+  it('rejects unknown status values', () => {
+    expect(PaymentStatusSchema.safeParse('pending').success).toBe(false);
+  });
+});
+
+describe('QuoteResponseSchema', () => {
+  it('accepts a valid quote response', () => {
+    expect(QuoteResponseSchema.safeParse({ totalCostCents: 2000, billedHours: 2 }).success).toBe(true);
+  });
+
+  it('rejects a negative totalCostCents', () => {
+    expect(QuoteResponseSchema.safeParse({ totalCostCents: -100, billedHours: 2 }).success).toBe(false);
+  });
+
+  it('rejects a non-integer billedHours', () => {
+    expect(QuoteResponseSchema.safeParse({ totalCostCents: 2000, billedHours: 1.5 }).success).toBe(false);
+  });
+});
+
+const validAdminReservation = {
+  id: 'a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a',
+  reservationNumber: 'RES-1001',
+  lotId: 'a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a',
+  lotName: 'Loop Garage',
+  customerName: 'Jane Doe',
+  vehicleMake: 'Toyota',
+  vehicleModel: 'Corolla',
+  licensePlate: 'ABC1234',
+  startTime: '2026-07-02T10:00:00.000Z',
+  endTime: '2026-07-02T12:00:00.000Z',
+  totalCostCents: 2400,
+  status: 'active',
+  createdAt: new Date().toISOString(),
+};
+
+describe('AdminReservationSchema', () => {
+  it('accepts a valid admin reservation', () => {
+    expect(AdminReservationSchema.safeParse(validAdminReservation).success).toBe(true);
+  });
+
+  it('rejects an admin reservation with an invalid status', () => {
+    expect(AdminReservationSchema.safeParse({ ...validAdminReservation, status: 'bogus' }).success).toBe(false);
+  });
+});
+
+describe('AdminReservationDetailSchema', () => {
+  const validDetail = {
+    ...validAdminReservation,
+    customer: { name: 'Jane Doe', email: 'jane@example.com', phone: '3125551234', flagged: false },
+    payments: [
+      {
+        amountCents: 2400,
+        status: 'succeeded',
+        transactionId: 'txn_1',
+        cardLast4: '4242',
+        createdAt: new Date().toISOString(),
+      },
+    ],
+  };
+
+  it('accepts a valid admin reservation detail', () => {
+    expect(AdminReservationDetailSchema.safeParse(validDetail).success).toBe(true);
+  });
+
+  it('rejects a detail with an invalid customer email', () => {
+    const invalid = { ...validDetail, customer: { ...validDetail.customer, email: 'nope' } };
+    expect(AdminReservationDetailSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects a detail with an invalid payment status', () => {
+    const invalid = { ...validDetail, payments: [{ ...validDetail.payments[0], status: 'pending' }] };
+    expect(AdminReservationDetailSchema.safeParse(invalid).success).toBe(false);
+  });
+});
+
+describe('AdminReservationListResponseSchema', () => {
+  it('accepts a valid list response', () => {
+    expect(
+      AdminReservationListResponseSchema.safeParse({ rows: [validAdminReservation], total: 1 }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a list response with a negative total', () => {
+    expect(AdminReservationListResponseSchema.safeParse({ rows: [], total: -1 }).success).toBe(false);
+  });
+});
+
+describe('ExtendReservationRequestSchema', () => {
+  it('accepts a valid extend request', () => {
+    expect(
+      ExtendReservationRequestSchema.safeParse({ newEndTime: '2026-07-02T14:00:00.000Z' }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a non-datetime newEndTime', () => {
+    expect(ExtendReservationRequestSchema.safeParse({ newEndTime: 'not-a-date' }).success).toBe(false);
+  });
+});
+
+describe('CurrentInLotResponseSchema', () => {
+  it('accepts a valid current-in-lot response', () => {
+    const rows = [
+      {
+        reservationNumber: 'RES-1001',
+        licensePlate: 'ABC1234',
+        vehicleMake: 'Toyota',
+        vehicleModel: 'Corolla',
+        customerName: 'Jane Doe',
+        startTime: '2026-07-02T10:00:00.000Z',
+        endTime: '2026-07-02T12:00:00.000Z',
+      },
+    ];
+    expect(CurrentInLotResponseSchema.safeParse(rows).success).toBe(true);
+  });
+
+  it('rejects a non-array payload', () => {
+    expect(CurrentInLotResponseSchema.safeParse({ rows: [] }).success).toBe(false);
+  });
+});
+
+const validAdminCustomer = {
+  id: 'a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a',
+  name: 'Jane Doe',
+  email: 'jane@example.com',
+  phone: '3125551234',
+  flagged: false,
+  flagReason: null,
+  reservationCount: 3,
+  lifetimeSpendCents: 9000,
+};
+
+describe('AdminCustomerSchema', () => {
+  it('accepts a valid admin customer', () => {
+    expect(AdminCustomerSchema.safeParse(validAdminCustomer).success).toBe(true);
+  });
+
+  it('accepts a flagged customer with a flagReason', () => {
+    expect(
+      AdminCustomerSchema.safeParse({ ...validAdminCustomer, flagged: true, flagReason: 'Chargeback risk' })
+        .success,
+    ).toBe(true);
+  });
+
+  it('rejects a negative lifetimeSpendCents', () => {
+    expect(AdminCustomerSchema.safeParse({ ...validAdminCustomer, lifetimeSpendCents: -1 }).success).toBe(false);
+  });
+});
+
+describe('AdminCustomerListResponseSchema', () => {
+  it('accepts a valid list response', () => {
+    expect(
+      AdminCustomerListResponseSchema.safeParse({ rows: [validAdminCustomer], total: 1 }).success,
+    ).toBe(true);
+  });
+});
+
+describe('AdminCustomerDetailSchema', () => {
+  it('accepts a valid customer detail with reservations', () => {
+    expect(
+      AdminCustomerDetailSchema.safeParse({ ...validAdminCustomer, reservations: [validAdminReservation] })
+        .success,
+    ).toBe(true);
+  });
+
+  it('rejects a customer detail with an invalid reservation', () => {
+    expect(
+      AdminCustomerDetailSchema.safeParse({
+        ...validAdminCustomer,
+        reservations: [{ ...validAdminReservation, status: 'bogus' }],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('FlagCustomerRequestSchema', () => {
+  it('accepts a valid flag request', () => {
+    expect(FlagCustomerRequestSchema.safeParse({ reason: 'Chargeback risk' }).success).toBe(true);
+  });
+
+  it('rejects an empty reason', () => {
+    expect(FlagCustomerRequestSchema.safeParse({ reason: '' }).success).toBe(false);
+  });
+
+  it('rejects a reason over 300 characters', () => {
+    expect(FlagCustomerRequestSchema.safeParse({ reason: 'x'.repeat(301) }).success).toBe(false);
+  });
+});
+
+describe('DayTypeSchema', () => {
+  it('accepts weekday, weekend, all', () => {
+    for (const dayType of ['weekday', 'weekend', 'all']) {
+      expect(DayTypeSchema.safeParse(dayType).success).toBe(true);
+    }
+  });
+
+  it('rejects an unknown dayType', () => {
+    expect(DayTypeSchema.safeParse('holiday').success).toBe(false);
+  });
+});
+
+const validPricingRule = {
+  id: 'a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a',
+  lotId: 'a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a',
+  dayType: 'weekday',
+  startHour: 7,
+  endHour: 19,
+  hourlyRateCents: 1500,
+  createdAt: new Date().toISOString(),
+};
+
+describe('PricingRuleSchema', () => {
+  it('accepts a valid pricing rule', () => {
+    expect(PricingRuleSchema.safeParse(validPricingRule).success).toBe(true);
+  });
+
+  it('rejects a rule where endHour is not greater than startHour', () => {
+    expect(PricingRuleSchema.safeParse({ ...validPricingRule, startHour: 10, endHour: 10 }).success).toBe(false);
+  });
+
+  it('rejects a rule with startHour out of range', () => {
+    expect(PricingRuleSchema.safeParse({ ...validPricingRule, startHour: 24 }).success).toBe(false);
+  });
+
+  it('rejects a rule with a non-positive hourlyRateCents', () => {
+    expect(PricingRuleSchema.safeParse({ ...validPricingRule, hourlyRateCents: 0 }).success).toBe(false);
+  });
+});
+
+describe('CreatePricingRuleRequestSchema', () => {
+  it('accepts a valid create-pricing-rule request', () => {
+    expect(
+      CreatePricingRuleRequestSchema.safeParse({
+        dayType: 'weekend',
+        startHour: 17,
+        endHour: 24,
+        hourlyRateCents: 1200,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects endHour <= startHour', () => {
+    expect(
+      CreatePricingRuleRequestSchema.safeParse({
+        dayType: 'all',
+        startHour: 12,
+        endHour: 12,
+        hourlyRateCents: 1000,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+const validCapacityOverride = {
+  id: 'a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a',
+  lotId: 'a2f4c1a0-1b2c-4d3e-8f4a-5b6c7d8e9f0a',
+  spacesClosed: 5,
+  reason: 'Resurfacing',
+  startsAt: '2026-07-02T00:00:00.000Z',
+  endsAt: '2026-07-03T00:00:00.000Z',
+  createdAt: new Date().toISOString(),
+};
+
+describe('CapacityOverrideSchema', () => {
+  it('accepts a valid capacity override', () => {
+    expect(CapacityOverrideSchema.safeParse(validCapacityOverride).success).toBe(true);
+  });
+
+  it('accepts a capacity override with a null endsAt (open-ended)', () => {
+    expect(CapacityOverrideSchema.safeParse({ ...validCapacityOverride, endsAt: null }).success).toBe(true);
+  });
+
+  it('rejects a non-positive spacesClosed', () => {
+    expect(CapacityOverrideSchema.safeParse({ ...validCapacityOverride, spacesClosed: 0 }).success).toBe(false);
+  });
+});
+
+describe('CreateCapacityOverrideRequestSchema', () => {
+  it('accepts a valid create-capacity-override request', () => {
+    expect(
+      CreateCapacityOverrideRequestSchema.safeParse({
+        spacesClosed: 5,
+        reason: 'Resurfacing',
+        startsAt: '2026-07-02T00:00:00.000Z',
+        endsAt: '2026-07-03T00:00:00.000Z',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('accepts a request without endsAt (open-ended)', () => {
+    expect(
+      CreateCapacityOverrideRequestSchema.safeParse({
+        spacesClosed: 5,
+        reason: 'Resurfacing',
+        startsAt: '2026-07-02T00:00:00.000Z',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects endsAt at/before startsAt', () => {
+    expect(
+      CreateCapacityOverrideRequestSchema.safeParse({
+        spacesClosed: 5,
+        reason: 'Resurfacing',
+        startsAt: '2026-07-02T00:00:00.000Z',
+        endsAt: '2026-07-01T00:00:00.000Z',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects spacesClosed <= 0', () => {
+    expect(
+      CreateCapacityOverrideRequestSchema.safeParse({
+        spacesClosed: 0,
+        reason: 'Resurfacing',
+        startsAt: '2026-07-02T00:00:00.000Z',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('HeatmapResponseSchema', () => {
+  it('accepts a valid heatmap response', () => {
+    expect(
+      HeatmapResponseSchema.safeParse({ cells: [{ dow: 0, hour: 9, occupancyPct: 42.5 }] }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a cell with dow out of range', () => {
+    expect(HeatmapResponseSchema.safeParse({ cells: [{ dow: 7, hour: 9, occupancyPct: 42.5 }] }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('WeeklyCompareResponseSchema', () => {
+  it('accepts a valid weekly-compare response', () => {
+    const dayPoint = { date: '2026-07-01', revenueCents: 10000, reservations: 5 };
+    expect(
+      WeeklyCompareResponseSchema.safeParse({ thisWeek: [dayPoint], lastWeek: [dayPoint] }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a response missing lastWeek', () => {
+    const dayPoint = { date: '2026-07-01', revenueCents: 10000, reservations: 5 };
+    expect(WeeklyCompareResponseSchema.safeParse({ thisWeek: [dayPoint] }).success).toBe(false);
+  });
+});
+
+describe('LotCompareResponseSchema', () => {
+  it('accepts a valid lot-compare response', () => {
+    const row = { lotId: 'abc', name: 'Loop Garage', revenueCents: 10000, reservations: 5, avgOccupancyPct: 60 };
+    expect(LotCompareResponseSchema.safeParse({ rows: [row] }).success).toBe(true);
+  });
+});
+
+describe('ForecastResponseSchema', () => {
+  it('accepts a valid forecast response', () => {
+    const point = { date: '2026-07-09', hour: 14, projectedOccupancyPct: 55.2 };
+    expect(ForecastResponseSchema.safeParse({ points: [point] }).success).toBe(true);
+  });
+
+  it('rejects a point with hour out of range', () => {
+    const point = { date: '2026-07-09', hour: 24, projectedOccupancyPct: 55.2 };
+    expect(ForecastResponseSchema.safeParse({ points: [point] }).success).toBe(false);
+  });
+});
+
+describe('DeclinesResponseSchema', () => {
+  it('accepts a valid declines response', () => {
+    const declines = {
+      total: 3,
+      byDay: [{ date: '2026-07-01', count: 1, amountCents: 1200 }],
+      recent: [
+        { lotName: 'Loop Garage', amountCents: 1200, cardLast4: '0002', createdAt: new Date().toISOString() },
+      ],
+    };
+    expect(DeclinesResponseSchema.safeParse(declines).success).toBe(true);
+  });
+
+  it('rejects a negative total', () => {
+    expect(
+      DeclinesResponseSchema.safeParse({ total: -1, byDay: [], recent: [] }).success,
+    ).toBe(false);
   });
 });

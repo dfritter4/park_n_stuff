@@ -36,6 +36,12 @@ const app = createApp({
   analyticsService,
   jwtSecret: config.jwtSecret,
   corsOrigins: config.corsOrigins,
+  lotRepository,
+  clock: systemClock,
+  // adminReservationRepository, adminCustomerRepository, pricingRuleRepository,
+  // capacityOverrideRepository, declinedAttemptRepository: wired in by P3/P4/P6
+  // once their Postgres-backed implementations exist; until then the
+  // corresponding admin routers stay 501 stubs.
 });
 
 app.listen(config.port, () => {
