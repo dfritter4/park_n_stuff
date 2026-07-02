@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type {
+  AdminUserRecord,
+  AdminUserRepository,
   Clock,
   LotRecord,
   LotRepository,
@@ -220,6 +222,31 @@ export class FakePaymentGateway implements PaymentGateway {
     this.calls.push(input);
     const success = typeof this.shouldSucceed === 'function' ? this.shouldSucceed(input) : this.shouldSucceed;
     return { success, transactionId: success ? `txn_fake_${this.calls.length}` : '' };
+  }
+}
+
+export class FakeAdminUserRepository implements AdminUserRepository {
+  private readonly usersByEmail = new Map<string, AdminUserRecord>();
+
+  seedAdmin(overrides: Partial<AdminUserRecord> = {}): AdminUserRecord {
+    const admin: AdminUserRecord = {
+      id: randomUUID(),
+      email: 'admin@example.com',
+      passwordHash: '',
+      ...overrides,
+    };
+    this.usersByEmail.set(admin.email, admin);
+    return admin;
+  }
+
+  async findByEmail(email: string): Promise<AdminUserRecord | null> {
+    return this.usersByEmail.get(email) ?? null;
+  }
+
+  async create(email: string, passwordHash: string): Promise<AdminUserRecord> {
+    const admin: AdminUserRecord = { id: randomUUID(), email, passwordHash };
+    this.usersByEmail.set(email, admin);
+    return admin;
   }
 }
 

@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import { CreateLotRequestSchema, UpdateLotRequestSchema } from '@parking/shared';
 import type { LotService } from '../../application/lotService.js';
 import { ValidationError } from '../../domain/errors.js';
 import { haversineDistanceKm } from '../geo.js';
-import { validateUuidParam } from '../middleware/validate.js';
+import { requireAdmin } from '../middleware/requireAdmin.js';
+import { validateBody, validateUuidParam } from '../middleware/validate.js';
 
 function parseCoordinate(value: unknown, paramName: string): number {
   const num = Number(value);
@@ -12,8 +14,9 @@ function parseCoordinate(value: unknown, paramName: string): number {
   return num;
 }
 
-export function createLotsRouter(lotService: LotService): Router {
+export function createLotsRouter(lotService: LotService, jwtSecret: string): Router {
   const router = Router();
+  const adminOnly = requireAdmin(jwtSecret);
 
   router.get('/', async (req, res, next) => {
     try {
@@ -50,6 +53,33 @@ export function createLotsRouter(lotService: LotService): Router {
     try {
       const lot = await lotService.getById(req.params.id);
       res.json(lot);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/', adminOnly, validateBody(CreateLotRequestSchema), async (req, res, next) => {
+    try {
+      const lot = await lotService.create(req.body);
+      res.status(201).json(lot);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.put('/:id', adminOnly, validateUuidParam('id'), validateBody(UpdateLotRequestSchema), async (req, res, next) => {
+    try {
+      const lot = await lotService.update(req.params.id, req.body);
+      res.json(lot);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.delete('/:id', adminOnly, validateUuidParam('id'), async (req, res, next) => {
+    try {
+      await lotService.remove(req.params.id);
+      res.status(204).send();
     } catch (err) {
       next(err);
     }

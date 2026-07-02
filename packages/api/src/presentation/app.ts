@@ -1,10 +1,12 @@
 import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
+import { AuthService } from '../application/authService.js';
 import type { CreateReservationService } from '../application/createReservation.js';
 import type { LotService } from '../application/lotService.js';
 import type { AdminUserRepository, ReservationRepository } from '../application/ports.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { createAdminAuthRouter } from './routes/adminAuth.js';
 import { createLotsRouter } from './routes/lots.js';
 import { createReservationsRouter, type ReservationsRateLimitOptions } from './routes/reservations.js';
 
@@ -30,7 +32,10 @@ export function createApp(deps: AppDeps): Express {
     res.json({ ok: true });
   });
 
-  app.use('/api/lots', createLotsRouter(deps.lotService));
+  const authService = new AuthService(deps.adminUserRepository, deps.jwtSecret);
+
+  app.use('/api/admin/auth', createAdminAuthRouter(authService));
+  app.use('/api/lots', createLotsRouter(deps.lotService, deps.jwtSecret));
   app.use(
     '/api/reservations',
     createReservationsRouter(deps.createReservationService, deps.reservationRepository, deps.reservationRateLimit),
