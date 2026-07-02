@@ -6,6 +6,19 @@ export function formatPercent1(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
+/** Formats an hour-of-day integer (0-23) as a zero-padded "HH:00" label. */
+export function formatHourLabel(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00`;
+}
+
+/** Formats a Date as a local "YYYY-MM-DD" string for date-input defaults and API params. */
+export function todayDateString(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function formatTimeRange(startISO: string, endISO: string): string {
   const formatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
   return `${formatter.format(new Date(startISO))} – ${formatter.format(new Date(endISO))}`;

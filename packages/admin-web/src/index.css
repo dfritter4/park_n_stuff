@@ -310,3 +310,254 @@ body {
 .activity-feed-empty {
   color: #6a6d75;
 }
+
+/* Lots page */
+
+.lots-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.lots-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lots-page-header h2 {
+  margin: 0;
+}
+
+.lots-page-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.lots-page-actions button,
+.analytics-page-header button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  background: #4f8cff;
+  color: #ffffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.lots-page-actions button:hover,
+.analytics-page-header button:hover {
+  opacity: 0.9;
+}
+
+.lots-page-actions button:disabled,
+.analytics-page-header button:disabled {
+  background: #a9c4f0;
+  cursor: default;
+}
+
+.lots-table,
+.day-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lots-table th,
+.lots-table td,
+.day-breakdown-table th,
+.day-breakdown-table td {
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f2;
+  font-size: 0.9rem;
+}
+
+.lots-table th,
+.day-breakdown-table th {
+  background: #f7f7f8;
+  color: #4a4d55;
+  font-weight: 600;
+}
+
+.lots-table tr:last-child td,
+.day-breakdown-table tr:last-child td {
+  border-bottom: none;
+}
+
+.lots-table-row-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.lots-table-row-actions button {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.lots-table-row-actions button:hover {
+  background: #f0f0f2;
+}
+
+.lots-table-empty {
+  color: #6a6d75;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge-active {
+  background: #e3f6ea;
+  color: #1c7d43;
+}
+
+.status-badge-maintenance {
+  background: #fdf0e0;
+  color: #b0631a;
+}
+
+/* Modal */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  width: 420px;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.modal h2 {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-row .form-field {
+  flex: 1;
+}
+
+.form-field label {
+  font-size: 0.85rem;
+  color: #4a4d55;
+}
+
+.form-field input,
+.form-field select {
+  padding: 0.5rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.form-error {
+  margin: 0;
+  color: #c0341f;
+  font-size: 0.8rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.modal-actions button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.modal-actions button[type='submit'] {
+  background: #4f8cff;
+  color: #ffffff;
+  border-color: #4f8cff;
+}
+
+.modal-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.danger-button {
+  background: #c0341f !important;
+  color: #ffffff !important;
+  border-color: #c0341f !important;
+}
+
+/* Analytics page */
+
+.analytics-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.analytics-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.analytics-page-header h2 {
+  margin: 0;
+}
+
+.analytics-section h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.chart-wrapper {
+  background: #ffffff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+#analytics-day-picker {
+  margin: 0 0 0.75rem 0.5rem;
+  padding: 0.4rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+}

@@ -97,3 +97,51 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   return body as T;
 }
+
+/**
+ * Variant of `apiFetch` for endpoints that respond with a binary payload
+ * (e.g. a CSV export) rather than JSON. Shares the same base URL, Bearer
+ * token attachment, and 401 handling; on a non-2xx response it attempts to
+ * parse a JSON error envelope the same way `apiFetch` does.
+ */
+export async function apiFetchBlob(path: string, init?: RequestInit): Promise<Blob> {
+  const token = getStoredToken();
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch {
+    throw new ApiError('NETWORK_ERROR', 'Unable to reach the server. Check your connection.', 0);
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearStoredToken();
+      window.location.href = '/login';
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      body = undefined;
+    }
+
+    if (isErrorEnvelope(body)) {
+      throw new ApiError(body.error.code, body.error.message, response.status);
+    }
+    throw new ApiError(
+      'INTERNAL_ERROR',
+      `Request failed with status ${response.status}`,
+      response.status,
+    );
+  }
+
+  return response.blob();
+}

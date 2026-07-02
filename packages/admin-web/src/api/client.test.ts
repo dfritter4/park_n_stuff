@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, ApiError } from './client';
+import { apiFetch, apiFetchBlob, ApiError } from './client';
 
 const TOKEN_KEY = 'admin_token';
 
@@ -111,6 +111,79 @@ describe('apiFetch', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: originalLocation,
+    });
+  });
+});
+
+describe('apiFetchBlob', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    sessionStorage.clear();
+  });
+
+  it('resolves with a Blob on a successful response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('date,revenue\n2026-01-01,10.00', {
+        status: 200,
+        headers: { 'Content-Type': 'text/csv' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await apiFetchBlob('/api/admin/analytics/export');
+
+    expect(result).toBeInstanceOf(Blob);
+    expect(await result.text()).toBe('date,revenue\n2026-01-01,10.00');
+  });
+
+  it('adds a Bearer Authorization header when a token is stored', async () => {
+    sessionStorage.setItem(TOKEN_KEY, 'test-token');
+    const fetchMock = vi.fn().mockResolvedValue(new Response('csv', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiFetchBlob('/api/admin/analytics/export');
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-token');
+  });
+
+  it('throws an ApiError parsed from the error envelope on a failed response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'Missing or invalid admin credentials' } }, 401),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const originalLocation = window.location;
+    const locationStub = { ...originalLocation, href: '' };
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: locationStub,
+    });
+
+    await expect(apiFetchBlob('/api/admin/analytics/export')).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+      status: 401,
+    });
+
+    expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(locationStub.href).toBe('/login');
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    });
+  });
+
+  it('throws an ApiError with code NETWORK_ERROR when fetch rejects', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(apiFetchBlob('/api/admin/analytics/export')).rejects.toMatchObject({
+      code: 'NETWORK_ERROR',
     });
   });
 });
