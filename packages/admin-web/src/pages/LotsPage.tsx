@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CreateLotRequest, Lot, LotStatus, UpdateLotRequest } from '@parking/shared';
 import { apiFetch } from '../api/client';
@@ -44,17 +44,25 @@ export function LotsPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateLotRequest }) =>
       apiFetch<Lot>(`/api/lots/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    onSuccess: async () => {
-      await invalidateLots();
+    onSuccess: () => {
       setModalState(null);
+    },
+    // Invalidate regardless of outcome: a failed request may still have been
+    // applied server-side (e.g. the response was lost after the write
+    // succeeded), so the table must be reconciled with true server state
+    // either way. The error still surfaces via updateMutation.error above.
+    onSettled: async () => {
+      await invalidateLots();
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiFetch<void>(`/api/lots/${id}`, { method: 'DELETE' }),
-    onSuccess: async () => {
-      await invalidateLots();
+    onSuccess: () => {
       setPendingAction(null);
+    },
+    onSettled: async () => {
+      await invalidateLots();
     },
   });
 
@@ -64,15 +72,46 @@ export function LotsPage() {
         lotIds.map((id) => apiFetch<Lot>(`/api/lots/${id}`, { method: 'PUT', body: JSON.stringify({ status }) })),
       );
     },
-    onSuccess: async () => {
-      await invalidateLots();
+    onSuccess: () => {
       setPendingAction(null);
+    },
+    // A partial failure (some PUTs succeeded, some rejected) still rejects
+    // the whole Promise.all, so onSuccess never runs. Reconcile with the
+    // server on every outcome so lots that DID update are reflected in the
+    // table even when the mutation as a whole errors; keep the confirm
+    // dialog open on failure (see onSuccess) so bulkStatusMutation.error
+    // stays visible to the user.
+    onSettled: async () => {
+      await invalidateLots();
       setSelectedIds(new Set());
     },
   });
 
   const lots = lotsQuery.data ?? [];
   const isMutating = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending || bulkStatusMutation.isPending;
+
+  // Reconcile the selection with the latest server state: if a lot was
+  // removed (deleted here, or by another admin) between selection and
+  // refetch, drop its id so "select all" and bulk actions don't silently
+  // operate on/count a lot that no longer exists.
+  useEffect(() => {
+    if (!lotsQuery.data) {
+      return;
+    }
+    const validIds = new Set(lotsQuery.data.map((lot) => lot.id));
+    setSelectedIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (validIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [lotsQuery.data]);
 
   function toggleSelected(id: string) {
     setSelectedIds((prev) => {
