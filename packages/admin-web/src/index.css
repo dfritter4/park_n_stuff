@@ -1,0 +1,312 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  color: #1a1a1a;
+  background: #f7f7f8;
+}
+
+/* Layout */
+
+.app-layout {
+  display: flex;
+  height: 100%;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #1a1d23;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  padding: 1.25rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-bottom: 1px solid #2c2f36;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 0;
+}
+
+.sidebar-nav a {
+  padding: 0.75rem 1.5rem;
+  color: #c4c7cf;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.sidebar-nav a:hover {
+  background: #262a32;
+  color: #ffffff;
+}
+
+.sidebar-nav a.active {
+  background: #2f3542;
+  color: #ffffff;
+  font-weight: 600;
+  border-left: 3px solid #4f8cff;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e2e6;
+}
+
+.topbar-email {
+  font-size: 0.9rem;
+  color: #4a4d55;
+}
+
+.logout-button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.logout-button:hover {
+  background: #f0f0f2;
+}
+
+.app-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.coming-soon {
+  color: #6a6d75;
+}
+
+/* Login page */
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 320px;
+  padding: 2rem;
+  background: #ffffff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.login-card h1 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.login-card label {
+  font-size: 0.85rem;
+  color: #4a4d55;
+  margin-top: 0.5rem;
+}
+
+.login-card input {
+  padding: 0.5rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.login-card button {
+  margin-top: 1.25rem;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 4px;
+  background: #4f8cff;
+  color: #ffffff;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.login-card button:disabled {
+  background: #a9c4f0;
+  cursor: default;
+}
+
+.login-error {
+  color: #c0341f;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Dashboard */
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.metric-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.metric-card-label {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  color: #6a6d75;
+}
+
+.metric-card-value {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.dashboard-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.lot-gauge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.lot-gauge {
+  background: #ffffff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.lot-gauge-name {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.lot-gauge-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #e9e9ec;
+  overflow: hidden;
+}
+
+.lot-gauge-bar-fill {
+  height: 100%;
+  background: #4f8cff;
+  transition: width 0.3s ease;
+}
+
+.lot-gauge-occupancy {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.85rem;
+  color: #4a4d55;
+}
+
+.lot-gauge-revenue {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6a6d75;
+}
+
+.activity-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+}
+
+.activity-feed-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f0f0f2;
+  font-size: 0.85rem;
+  gap: 1rem;
+}
+
+.activity-feed-item:last-child {
+  border-bottom: none;
+}
+
+.activity-feed-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.activity-feed-reservation-number {
+  font-weight: 600;
+}
+
+.activity-feed-lot-name {
+  color: #6a6d75;
+}
+
+.activity-feed-secondary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #4a4d55;
+  white-space: nowrap;
+}
+
+.activity-feed-created-at {
+  color: #9a9da5;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.activity-feed-empty {
+  color: #6a6d75;
+}
