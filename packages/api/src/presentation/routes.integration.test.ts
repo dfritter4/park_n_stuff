@@ -8,9 +8,11 @@ import { PostgresLotRepository } from '../infrastructure/postgres/lotRepository.
 import { PostgresReservationUnitOfWork } from '../infrastructure/postgres/reservationUnitOfWork.js';
 import { PostgresReservationRepository } from '../infrastructure/postgres/reservationRepository.js';
 import { PostgresAdminUserRepository } from '../infrastructure/postgres/adminUserRepository.js';
+import { PostgresAnalyticsRepository } from '../infrastructure/postgres/analyticsRepository.js';
 import { MockPaymentGateway } from '../infrastructure/mockPaymentGateway.js';
 import { LotService } from '../application/lotService.js';
 import { CreateReservationService } from '../application/createReservation.js';
+import { AnalyticsService } from '../application/analyticsService.js';
 import { FakeClock } from '../application/testing/fakes.js';
 import { createApp } from './app.js';
 
@@ -56,17 +58,20 @@ describe('presentation routes (integration)', () => {
     const uow = new PostgresReservationUnitOfWork(pool);
     const reservationRepository = new PostgresReservationRepository(pool);
     const adminUserRepository = new PostgresAdminUserRepository(pool);
+    const analyticsRepository = new PostgresAnalyticsRepository(pool);
     const gateway = new MockPaymentGateway(() => 0);
     const clock = new FakeClock(new Date('2026-01-01T00:00:00.000Z'));
 
     const lotService = new LotService(lotRepository);
     const createReservationService = new CreateReservationService(uow, gateway, clock);
+    const analyticsService = new AnalyticsService(analyticsRepository);
 
     app = createApp({
       lotService,
       createReservationService,
       reservationRepository,
       adminUserRepository,
+      analyticsService,
       jwtSecret: 'test-secret',
       corsOrigins: ['http://localhost:5173'],
       // High ceiling so the many POSTs in this file don't trip the 10/min limiter.

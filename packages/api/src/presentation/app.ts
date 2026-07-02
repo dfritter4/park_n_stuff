@@ -1,11 +1,13 @@
 import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
+import type { AnalyticsService } from '../application/analyticsService.js';
 import { AuthService } from '../application/authService.js';
 import type { CreateReservationService } from '../application/createReservation.js';
 import type { LotService } from '../application/lotService.js';
 import type { AdminUserRepository, ReservationRepository } from '../application/ports.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { createAdminAnalyticsRouter } from './routes/admin.js';
 import { createAdminAuthRouter } from './routes/adminAuth.js';
 import { createLotsRouter } from './routes/lots.js';
 import { createReservationsRouter, type ReservationsRateLimitOptions } from './routes/reservations.js';
@@ -15,6 +17,7 @@ export interface AppDeps {
   createReservationService: CreateReservationService;
   reservationRepository: ReservationRepository;
   adminUserRepository: AdminUserRepository;
+  analyticsService: AnalyticsService;
   jwtSecret: string;
   corsOrigins?: string[];
   /** Override for tests so the 10/min limiter doesn't throttle a fast test suite. */
@@ -35,6 +38,7 @@ export function createApp(deps: AppDeps): Express {
   const authService = new AuthService(deps.adminUserRepository, deps.jwtSecret);
 
   app.use('/api/admin/auth', createAdminAuthRouter(authService));
+  app.use('/api/admin', createAdminAnalyticsRouter(deps.analyticsService, deps.jwtSecret));
   app.use('/api/lots', createLotsRouter(deps.lotService, deps.jwtSecret));
   app.use(
     '/api/reservations',
