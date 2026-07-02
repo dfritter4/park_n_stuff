@@ -1,10 +1,12 @@
-import { calculateCostCents } from '../../domain/pricing.js';
+import { calculateWindowCostCents, type HourlyRateRule } from '../../domain/pricing.js';
 import { generateReservationNumber } from '../../domain/reservationNumber.js';
 
 const HISTORY_DAYS = 30;
 const HOURS_PER_DAY = 24;
 const MS_PER_HOUR = 60 * 60 * 1000;
 const DURATIONS_HOURS = [1, 2, 4, 8] as const;
+const CANCELLED_REFUND_RATE = 0.5;
+const DECLINED_ATTEMPT_RATE = 0.025;
 
 const PEAK_HOURS = new Set([8, 9, 12, 13, 17, 18]);
 const PEAK_HOUR_WEIGHT = 3;
@@ -50,12 +52,26 @@ export interface SeedLot {
   lng: number;
   capacity: number;
   hourlyRateCents: number;
+  rules?: HourlyRateRule[];
 }
 
 export interface SeedPayment {
   amountCents: number;
   cardLast4: string;
   transactionId: string;
+  status: 'succeeded' | 'refunded';
+}
+
+export interface SeedDeclinedAttempt {
+  lotIndex: number;
+  amountCents: number;
+  cardLast4: string;
+  createdAt: Date;
+}
+
+export interface SeedHistory {
+  reservations: SeedReservation[];
+  declinedAttempts: SeedDeclinedAttempt[];
 }
 
 export interface SeedReservation {
@@ -143,10 +159,12 @@ function buildReservation(
   endTime: Date,
   status: SeedReservation['status'],
 ): SeedReservation {
-  const totalCostCents = calculateCostCents(lot.hourlyRateCents, startTime, endTime);
+  const totalCostCents = calculateWindowCostCents(lot.hourlyRateCents, lot.rules ?? [], startTime, endTime);
   const vehicle = pickFrom(ctx.random, VEHICLES);
   const customerIndex = ctx.customerCounter % CUSTOMER_COUNT;
   ctx.customerCounter += 1;
+  const paymentStatus: SeedPayment['status'] =
+    status === 'cancelled' && ctx.random() < CANCELLED_REFUND_RATE ? 'refunded' : 'succeeded';
 
   return {
     lotIndex,
@@ -163,8 +181,33 @@ function buildReservation(
       amountCents: totalCostCents,
       cardLast4: randomDigits(ctx.random, 4),
       transactionId: randomTransactionId(ctx.random),
+      status: paymentStatus,
     },
   };
+}
+
+/**
+ * Emits a declined_attempts row for ~DECLINED_ATTEMPT_RATE of the payment
+ * attempts represented by `reservations`, reusing each sampled
+ * reservation's lot and cost as the failed attempt's profile (same
+ * hypothetical booking, different outcome) and its startTime as the
+ * decline's timestamp so declines are spread across the history window the
+ * same way reservations are.
+ */
+function generateDeclinedAttempts(ctx: GenerationContext, reservations: SeedReservation[]): SeedDeclinedAttempt[] {
+  const declinedAttempts: SeedDeclinedAttempt[] = [];
+
+  for (const reservation of reservations) {
+    if (ctx.random() >= DECLINED_ATTEMPT_RATE) continue;
+    declinedAttempts.push({
+      lotIndex: reservation.lotIndex,
+      amountCents: reservation.totalCostCents,
+      cardLast4: randomDigits(ctx.random, 4),
+      createdAt: reservation.startTime,
+    });
+  }
+
+  return declinedAttempts;
 }
 
 function generateLotHistory(
@@ -229,15 +272,19 @@ function generateActiveReservations(ctx: GenerationContext, lots: SeedLot[], now
 
 /**
  * Pure generator for 30 days of realistic reservation history plus a handful of
- * currently-active reservations spanning `now`. Deterministic for a given
- * `lots`/`now`/`random` triple so it can be unit tested without a database.
+ * currently-active reservations spanning `now`, along with a scattering of
+ * declined_attempts rows. Deterministic for a given `lots`/`now`/`random`
+ * triple so it can be unit tested without a database. Costs are priced via
+ * `calculateWindowCostCents` against each lot's `rules`, so seeded totals
+ * reflect any lot-specific pricing rules.
  */
-export function generateHistory(lots: SeedLot[], now: Date, random: () => number = Math.random): SeedReservation[] {
+export function generateHistory(lots: SeedLot[], now: Date, random: () => number = Math.random): SeedHistory {
   const windowStart = new Date(now.getTime() - HISTORY_DAYS * HOURS_PER_DAY * MS_PER_HOUR);
   const ctx: GenerationContext = { usedReservationNumbers: new Set(), customerCounter: 0, random };
 
   const reservations = lots.flatMap((lot, lotIndex) => generateLotHistory(ctx, lot, lotIndex, windowStart, now));
   reservations.push(...generateActiveReservations(ctx, lots, now));
+  const declinedAttempts = generateDeclinedAttempts(ctx, reservations);
 
-  return reservations;
+  return { reservations, declinedAttempts };
 }

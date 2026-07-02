@@ -9,6 +9,7 @@ export const LOTS: readonly SeedLot[] = [
     lng: -87.6298,
     capacity: 250,
     hourlyRateCents: 1200,
+    rules: [{ dayType: 'weekday', startHour: 7, endHour: 19, hourlyRateCents: 1500 }],
   },
   {
     name: 'River North Self Park',
@@ -18,6 +19,7 @@ export const LOTS: readonly SeedLot[] = [
     lng: -87.635,
     capacity: 180,
     hourlyRateCents: 1000,
+    rules: [{ dayType: 'weekend', startHour: 17, endHour: 24, hourlyRateCents: 1200 }],
   },
   {
     name: 'West Loop Lot',
@@ -27,6 +29,7 @@ export const LOTS: readonly SeedLot[] = [
     lng: -87.652,
     capacity: 120,
     hourlyRateCents: 800,
+    rules: [{ dayType: 'all', startHour: 6, endHour: 10, hourlyRateCents: 1000 }],
   },
   {
     name: 'Wicker Park Lot',

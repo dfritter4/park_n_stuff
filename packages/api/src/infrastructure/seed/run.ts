@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { Pool } from 'pg';
 import { createPool } from '../db.js';
-import { generateHistory, type SeedReservation } from './generateHistory.js';
+import { generateHistory, type SeedDeclinedAttempt, type SeedReservation } from './generateHistory.js';
 import { LOTS } from './lots.js';
 import { createMulberry32 } from './mulberry32.js';
 
@@ -32,22 +32,35 @@ const CUSTOMER_LAST_NAMES = ['Johnson', 'Garcia'] as const;
 const CUSTOMER_COUNT = CUSTOMER_FIRST_NAMES.length * CUSTOMER_LAST_NAMES.length;
 
 const RESERVATION_INSERT_BATCH_SIZE = 1000;
+const DECLINED_ATTEMPT_INSERT_BATCH_SIZE = 1000;
+
+// Deterministic subset of seeded customers flagged for admin-workflow demo purposes.
+const FLAGGED_CUSTOMERS: ReadonlyArray<{ index: number; reason: string }> = [
+  { index: 0, reason: 'Multiple declined payment attempts in a short window' },
+  { index: 1, reason: 'Chargeback dispute opened by card issuer' },
+];
 
 interface CustomerSeed {
   name: string;
   email: string;
   phone: string;
+  flagged: boolean;
+  flagReason: string | null;
 }
 
 function buildCustomers(): CustomerSeed[] {
+  const flagsByIndex = new Map(FLAGGED_CUSTOMERS.map((f) => [f.index, f.reason]));
   const customers: CustomerSeed[] = [];
   for (const lastName of CUSTOMER_LAST_NAMES) {
     for (const firstName of CUSTOMER_FIRST_NAMES) {
       const index = customers.length;
+      const flagReason = flagsByIndex.get(index) ?? null;
       customers.push({
         name: `${firstName} ${lastName}`,
         email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${index}@example.com`,
         phone: `312555${(1000 + index).toString().padStart(4, '0')}`,
+        flagged: flagReason !== null,
+        flagReason,
       });
     }
   }
@@ -81,12 +94,36 @@ async function seedCustomers(pool: Pool): Promise<string[]> {
   const customerIds: string[] = [];
   for (const customer of buildCustomers()) {
     const result = await pool.query<{ id: string }>(
-      'INSERT INTO customers (name, email, phone) VALUES ($1, $2, $3) RETURNING id',
-      [customer.name, customer.email, customer.phone],
+      'INSERT INTO customers (name, email, phone, flagged, flag_reason) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [customer.name, customer.email, customer.phone, customer.flagged, customer.flagReason],
     );
     customerIds.push(result.rows[0].id);
   }
   return customerIds;
+}
+
+async function seedPricingRules(pool: Pool, lotIds: string[]): Promise<number> {
+  const params: unknown[] = [];
+  const valueGroups: string[] = [];
+  let count = 0;
+
+  LOTS.forEach((lot, lotIndex) => {
+    for (const rule of lot.rules ?? []) {
+      const base = count * 5;
+      valueGroups.push(`($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5})`);
+      params.push(lotIds[lotIndex], rule.dayType, rule.startHour, rule.endHour, rule.hourlyRateCents);
+      count += 1;
+    }
+  });
+
+  if (count === 0) return 0;
+
+  await pool.query(
+    `INSERT INTO pricing_rules (lot_id, day_type, start_hour, end_hour, hourly_rate_cents)
+     VALUES ${valueGroups.join(', ')}`,
+    params,
+  );
+  return count;
 }
 
 async function insertReservationBatch(
@@ -131,13 +168,15 @@ async function insertReservationBatch(
       randomUUID(),
       reservationId,
       reservation.payment.amountCents,
-      'succeeded',
+      reservation.payment.status,
       reservation.payment.transactionId,
       reservation.payment.cardLast4,
       reservation.startTime,
     );
 
-    batchRevenueCents += reservation.payment.amountCents;
+    if (reservation.payment.status === 'succeeded') {
+      batchRevenueCents += reservation.payment.amountCents;
+    }
   });
 
   await pool.query(
@@ -169,6 +208,30 @@ async function seedReservationsAndPayments(
   return revenueTotalCents;
 }
 
+async function insertDeclinedAttemptBatch(pool: Pool, batch: SeedDeclinedAttempt[], lotIds: string[]): Promise<void> {
+  const params: unknown[] = [];
+  const valueGroups: string[] = [];
+
+  batch.forEach((attempt, index) => {
+    const base = index * 4;
+    valueGroups.push(`($${base + 1},$${base + 2},$${base + 3},$${base + 4})`);
+    params.push(lotIds[attempt.lotIndex], attempt.amountCents, attempt.cardLast4, attempt.createdAt);
+  });
+
+  await pool.query(
+    `INSERT INTO declined_attempts (lot_id, amount_cents, card_last4, created_at)
+     VALUES ${valueGroups.join(', ')}`,
+    params,
+  );
+}
+
+async function seedDeclinedAttempts(pool: Pool, declinedAttempts: SeedDeclinedAttempt[], lotIds: string[]): Promise<void> {
+  for (let start = 0; start < declinedAttempts.length; start += DECLINED_ATTEMPT_INSERT_BATCH_SIZE) {
+    const batch = declinedAttempts.slice(start, start + DECLINED_ATTEMPT_INSERT_BATCH_SIZE);
+    await insertDeclinedAttemptBatch(pool, batch, lotIds);
+  }
+}
+
 async function seed(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
   const pool = createPool(databaseUrl);
@@ -186,19 +249,27 @@ async function seed(): Promise<void> {
       throw new Error(`Expected ${CUSTOMER_COUNT} seeded customers, got ${customerIds.length}`);
     }
 
-    const reservations = generateHistory([...LOTS], now, random);
+    const pricingRuleCount = await seedPricingRules(pool, lotIds);
+
+    const { reservations, declinedAttempts } = generateHistory([...LOTS], now, random);
     const revenueTotalCents = await seedReservationsAndPayments(pool, reservations, lotIds, customerIds);
+    await seedDeclinedAttempts(pool, declinedAttempts, lotIds);
 
     const activeCount = reservations.filter((r) => r.status === 'active').length;
     const completedCount = reservations.filter((r) => r.status === 'completed').length;
     const cancelledCount = reservations.filter((r) => r.status === 'cancelled').length;
+    const refundedCount = reservations.filter((r) => r.payment.status === 'refunded').length;
+    const flaggedCount = FLAGGED_CUSTOMERS.length;
 
     console.log('Seed complete:');
     console.log(`  Lots: ${lotIds.length}`);
-    console.log(`  Customers: ${customerIds.length}`);
+    console.log(`  Customers: ${customerIds.length} (flagged: ${flaggedCount})`);
+    console.log(`  Pricing rules: ${pricingRuleCount}`);
     console.log(
       `  Reservations: ${reservations.length} (completed: ${completedCount}, cancelled: ${cancelledCount}, active: ${activeCount})`,
     );
+    console.log(`  Refunded payments: ${refundedCount}`);
+    console.log(`  Declined attempts: ${declinedAttempts.length}`);
     console.log(`  Revenue (succeeded payments): $${(revenueTotalCents / 100).toFixed(2)}`);
     console.log(`  Admin login: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
   } finally {
