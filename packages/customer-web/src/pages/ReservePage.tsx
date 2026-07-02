@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { Lot } from '@parking/shared';
 import { apiFetch } from '../api/client';
 import { DurationPicker } from '../components/DurationPicker';
+import { useQuote } from '../hooks/useQuote';
 import { useReservationDraft } from '../lib/reservationDraft';
 
 interface ReserveFormState {
@@ -79,6 +80,8 @@ export function ReservePage() {
   const [touched, setTouched] = useState<Partial<Record<keyof ReserveFormState, boolean>>>({});
   const [submitted, setSubmitted] = useState(false);
 
+  const { quote } = useQuote(id, form.startTime, form.endTime);
+
   const errors = validate(form);
 
   function updateField<K extends keyof ReserveFormState>(key: K, value: ReserveFormState[K]) {
@@ -115,6 +118,7 @@ export function ReservePage() {
       },
       startTime: form.startTime,
       endTime: form.endTime,
+      quotedTotalCents: quote?.totalCostCents ?? null,
     });
     navigate(`/lots/${id}/pay`);
   }
@@ -248,6 +252,7 @@ export function ReservePage() {
             startTime={form.startTime}
             endTime={form.endTime}
             onChange={({ startTime, endTime }) => setForm((prev) => ({ ...prev, startTime, endTime }))}
+            quotedCostCents={quote?.totalCostCents}
           />
           {shouldShowError('startTime') && (
             <p role="alert" className="field-error">

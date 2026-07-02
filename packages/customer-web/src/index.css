@@ -413,6 +413,11 @@ button[type='submit']:disabled,
   color: #1a1a1a;
 }
 
+.duration-picker-cost-badge {
+  font-size: 0.8rem;
+  color: #2f7d3c;
+}
+
 /* Payment page */
 
 .payment-summary {

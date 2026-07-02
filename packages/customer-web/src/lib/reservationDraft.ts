@@ -26,6 +26,13 @@ export interface ReservationDraft {
   vehicle: ReservationDraftVehicle;
   startTime: string;
   endTime: string;
+  /**
+   * The server-authoritative quote total in cents, if one resolved before the
+   * customer continued to payment. `null` when no quote had arrived yet (e.g.
+   * the request was still debouncing/in flight, or it errored) — PaymentPage
+   * falls back to the local estimate in that case.
+   */
+  quotedTotalCents: number | null;
 }
 
 interface ReservationDraftContextValue {

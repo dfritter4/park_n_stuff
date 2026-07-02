@@ -23,6 +23,13 @@ interface DurationPickerProps {
   startTime: string;
   endTime: string;
   onChange: (range: DurationRange) => void;
+  /**
+   * Server-authoritative quote total for the current window, once it has
+   * resolved. When present it replaces the local estimate for display (the
+   * two can differ under pricing rules); `null`/`undefined` keeps the
+   * instant local estimate on screen.
+   */
+  quotedCostCents?: number | null;
 }
 
 /**
@@ -59,8 +66,16 @@ function matchesPreset(startTime: string, endTime: string, minutes: number): boo
   return actualMinutes === minutes;
 }
 
-export function DurationPicker({ hourlyRateCents, startTime, endTime, onChange }: DurationPickerProps) {
-  const costCents = estimateCostCents(hourlyRateCents, startTime, endTime);
+export function DurationPicker({
+  hourlyRateCents,
+  startTime,
+  endTime,
+  onChange,
+  quotedCostCents,
+}: DurationPickerProps) {
+  const localEstimateCents = estimateCostCents(hourlyRateCents, startTime, endTime);
+  const isConfirmed = quotedCostCents != null;
+  const costCents = quotedCostCents ?? localEstimateCents;
 
   function selectPreset(minutes: number) {
     const start = new Date();
@@ -115,8 +130,12 @@ export function DurationPicker({ hourlyRateCents, startTime, endTime, onChange }
       </div>
 
       {costCents !== null && (
-        <p className="duration-picker-cost" data-testid="duration-cost-preview">
+        <p
+          className={`duration-picker-cost${isConfirmed ? ' duration-picker-cost-confirmed' : ''}`}
+          data-testid="duration-cost-preview"
+        >
           Estimated total: <strong>{formatCurrency(costCents)}</strong>
+          {isConfirmed && <span className="duration-picker-cost-badge"> (confirmed)</span>}
         </p>
       )}
     </div>

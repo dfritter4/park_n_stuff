@@ -68,7 +68,10 @@ export function PaymentPage() {
   }
 
   const errors = validatePayment(form);
-  const costCents = estimateCostCents(draft.lot.hourlyRateCents, draft.startTime, draft.endTime) ?? 0;
+  const costCents =
+    draft.quotedTotalCents ??
+    estimateCostCents(draft.lot.hourlyRateCents, draft.startTime, draft.endTime) ??
+    0;
   const isSubmitting = status === 'submitting';
 
   function updateField<K extends keyof PaymentFormState>(key: K, value: PaymentFormState[K]) {
