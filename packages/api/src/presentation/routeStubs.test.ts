@@ -8,12 +8,15 @@ import { CreateReservationService } from '../application/createReservation.js';
 import { LotService } from '../application/lotService.js';
 import {
   FakeAdminUserRepository,
+  FakeCapacityOverrideRepository,
   FakeClock,
+  FakeDeclinedAttemptRepository,
+  FakeLotRepository,
   FakePaymentGateway,
+  FakePricingRuleRepository,
   FakeReservationRepository,
   FakeReservationUnitOfWork,
   InMemoryDatabase,
-  FakeLotRepository,
 } from '../application/testing/fakes.js';
 import { createApp } from './app.js';
 
@@ -45,14 +48,23 @@ describe('phase-2 stub routers (wiring)', () => {
   beforeAll(() => {
     const db = new InMemoryDatabase();
     const lotRepository = new FakeLotRepository(db);
+    const capacityOverrideRepository = new FakeCapacityOverrideRepository(db);
+    const pricingRuleRepository = new FakePricingRuleRepository(db);
+    const declinedAttemptRepository = new FakeDeclinedAttemptRepository(db);
     const uow = new FakeReservationUnitOfWork(db);
     const reservationRepository = new FakeReservationRepository(db);
     const adminUserRepository = new FakeAdminUserRepository();
     const gateway = new FakePaymentGateway(true);
     const clock = new FakeClock();
 
-    const lotService = new LotService(lotRepository);
-    const createReservationService = new CreateReservationService(uow, gateway, clock);
+    const lotService = new LotService(lotRepository, capacityOverrideRepository, pricingRuleRepository, clock);
+    const createReservationService = new CreateReservationService(
+      uow,
+      gateway,
+      clock,
+      pricingRuleRepository,
+      declinedAttemptRepository,
+    );
     const analyticsService = new AnalyticsService(unimplementedAnalyticsRepository());
 
     app = createApp({

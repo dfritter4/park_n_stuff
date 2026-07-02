@@ -1,11 +1,13 @@
 import type { Pool, PoolClient } from 'pg';
 import { withTransaction } from '../db.js';
 import type {
+  CapacityOverrideRecord,
   LotRecord,
   ReservationRecord,
   ReservationTxn,
   ReservationUnitOfWork,
 } from '../../application/ports.js';
+import { queryActiveCapacityOverrides } from './capacityOverrideRepository.js';
 
 interface LotRow {
   id: string;
@@ -82,6 +84,18 @@ class PostgresReservationTxn implements ReservationTxn {
       [lotId, start, end],
     );
     return Number(result.rows[0].count);
+  }
+
+  async listActiveCapacityOverrides(lotId: string, start: Date, end: Date): Promise<CapacityOverrideRecord[]> {
+    return queryActiveCapacityOverrides(this.client, lotId, start, end);
+  }
+
+  async findCustomerByEmail(email: string): Promise<{ id: string; flagged: boolean } | null> {
+    const result = await this.client.query<{ id: string; flagged: boolean }>(
+      'SELECT id, flagged FROM customers WHERE email = $1',
+      [email],
+    );
+    return result.rows[0] ? { id: result.rows[0].id, flagged: result.rows[0].flagged } : null;
   }
 
   async upsertCustomer(c: { name: string; email: string; phone: string }): Promise<{ id: string }> {

@@ -39,6 +39,19 @@ export interface ReservationUnitOfWork {
 export interface ReservationTxn {
   getLotForUpdate(lotId: string): Promise<LotRecord | null>;
   countActiveOverlapping(lotId: string, start: Date, end: Date): Promise<number>;
+  /**
+   * Capacity overrides overlapping [start, end), read via the same client as
+   * the lot's FOR UPDATE lock so the capacity gate sees a consistent
+   * snapshot within the transaction (P2 extension — mirrors
+   * CapacityOverrideRepository.listActiveForWindow's contract).
+   */
+  listActiveCapacityOverrides(lotId: string, start: Date, end: Date): Promise<CapacityOverrideRecord[]>;
+  /**
+   * Looks up an existing customer's flagged status by email, read inside the
+   * transaction so the flagged gate is checked before any charge is
+   * attempted (P2 extension, needed by the CUSTOMER_FLAGGED gate).
+   */
+  findCustomerByEmail(email: string): Promise<{ id: string; flagged: boolean } | null>;
   upsertCustomer(c: { name: string; email: string; phone: string }): Promise<{ id: string }>;
   insertReservation(r: Omit<ReservationRecord, 'id' | 'createdAt'>): Promise<ReservationRecord>;
   insertPayment(p: {

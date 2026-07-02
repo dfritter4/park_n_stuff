@@ -4,7 +4,10 @@ import type { Express } from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { CreateReservationRequest } from '@parking/shared';
 import { createPool } from '../infrastructure/db.js';
+import { PostgresCapacityOverrideRepository } from '../infrastructure/postgres/capacityOverrideRepository.js';
+import { PostgresDeclinedAttemptRepository } from '../infrastructure/postgres/declinedAttemptRepository.js';
 import { PostgresLotRepository } from '../infrastructure/postgres/lotRepository.js';
+import { PostgresPricingRuleRepository } from '../infrastructure/postgres/pricingRuleRepository.js';
 import { PostgresReservationUnitOfWork } from '../infrastructure/postgres/reservationUnitOfWork.js';
 import { PostgresReservationRepository } from '../infrastructure/postgres/reservationRepository.js';
 import { PostgresAdminUserRepository } from '../infrastructure/postgres/adminUserRepository.js';
@@ -62,8 +65,18 @@ describe('presentation routes (integration)', () => {
     const gateway = new MockPaymentGateway(() => 0);
     const clock = new FakeClock(new Date('2026-01-01T00:00:00.000Z'));
 
-    const lotService = new LotService(lotRepository);
-    const createReservationService = new CreateReservationService(uow, gateway, clock);
+    const pricingRuleRepository = new PostgresPricingRuleRepository(pool);
+    const capacityOverrideRepository = new PostgresCapacityOverrideRepository(pool);
+    const declinedAttemptRepository = new PostgresDeclinedAttemptRepository(pool);
+
+    const lotService = new LotService(lotRepository, capacityOverrideRepository, pricingRuleRepository, clock);
+    const createReservationService = new CreateReservationService(
+      uow,
+      gateway,
+      clock,
+      pricingRuleRepository,
+      declinedAttemptRepository,
+    );
     const analyticsService = new AnalyticsService(analyticsRepository);
 
     app = createApp({
@@ -149,6 +162,94 @@ describe('presentation routes (integration)', () => {
       expect(res.body).toEqual({ error: { code: 'PAYMENT_DECLINED', message: expect.any(String) } });
     });
 
+    it('records a declined_attempts row while leaving reservations/payments empty for a declined card', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create(lotInput);
+
+      const res = await request(app)
+        .post('/api/reservations')
+        .send(
+          buildReservationRequest(lot.id, {
+            payment: { ...buildReservationRequest(lot.id).payment, cardNumber: '4111111111110002' },
+          }),
+        );
+
+      expect(res.status).toBe(402);
+
+      const declined = await pool.query(
+        'SELECT lot_id, amount_cents, card_last4 FROM declined_attempts WHERE lot_id = $1',
+        [lot.id],
+      );
+      expect(declined.rows).toHaveLength(1);
+      expect(declined.rows[0]).toMatchObject({ lot_id: lot.id, amount_cents: 1000, card_last4: '0002' });
+
+      const reservations = await pool.query('SELECT COUNT(*) FROM reservations WHERE lot_id = $1', [lot.id]);
+      expect(Number(reservations.rows[0].count)).toBe(0);
+      const payments = await pool.query('SELECT COUNT(*) FROM payments');
+      expect(Number(payments.rows[0].count)).toBe(0);
+    });
+
+    it('prices using an active pricing rule spanning two rate bands, summing per-hour', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create(lotInput);
+      // Rule covers only the first billed hour (10:00-11:00 UTC); the second
+      // hour (11:00-12:00) falls back to the lot's flat hourlyRateCents.
+      await pool.query(
+        `INSERT INTO pricing_rules (lot_id, day_type, start_hour, end_hour, hourly_rate_cents)
+         VALUES ($1, 'all', 10, 11, 800)`,
+        [lot.id],
+      );
+
+      const res = await request(app).post('/api/reservations').send(buildReservationRequest(lot.id));
+
+      expect(res.status).toBe(201);
+      expect(res.body.totalCostCents).toBe(800 + lotInput.hourlyRateCents);
+    });
+
+    it('shrinks effective capacity via an active override and returns 409 LOT_FULL at fewer reservations', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create({ ...lotInput, capacity: 2 });
+      // Open-ended override active well before the reservation window, closing 1 of the 2 spaces.
+      await pool.query(
+        `INSERT INTO capacity_overrides (lot_id, spaces_closed, reason, starts_at, ends_at)
+         VALUES ($1, 1, 'Event', '2020-01-01T00:00:00Z', NULL)`,
+        [lot.id],
+      );
+
+      const first = await request(app).post('/api/reservations').send(buildReservationRequest(lot.id));
+      expect(first.status).toBe(201);
+
+      const second = await request(app)
+        .post('/api/reservations')
+        .send(buildReservationRequest(lot.id, { vehicle: { make: 'Toyota', model: 'Corolla', licensePlate: 'XYZ999' } }));
+
+      expect(second.status).toBe(409);
+      expect(second.body).toEqual({ error: { code: 'LOT_FULL', message: expect.any(String) } });
+    });
+
+    it('returns 403 CUSTOMER_FLAGGED, persists nothing, and never charges the gateway for a flagged existing customer email', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create(lotInput);
+      await pool.query(
+        `INSERT INTO customers (name, email, phone, flagged, flag_reason)
+         VALUES ('Flagged Customer', 'alice@example.com', '555-0100', true, 'chargeback history')`,
+      );
+
+      const res = await request(app).post('/api/reservations').send(buildReservationRequest(lot.id));
+
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ error: { code: 'CUSTOMER_FLAGGED', message: expect.any(String) } });
+
+      const reservations = await pool.query('SELECT COUNT(*) FROM reservations WHERE lot_id = $1', [lot.id]);
+      expect(Number(reservations.rows[0].count)).toBe(0);
+      const payments = await pool.query('SELECT COUNT(*) FROM payments');
+      expect(Number(payments.rows[0].count)).toBe(0);
+      // The gateway auto-succeeds (fixed random(): () => 0), so its absence from
+      // declined_attempts too confirms it was never invoked for this request.
+      const declined = await pool.query('SELECT COUNT(*) FROM declined_attempts WHERE lot_id = $1', [lot.id]);
+      expect(Number(declined.rows[0].count)).toBe(0);
+    });
+
     it('returns 400 VALIDATION_ERROR with Zod details for an invalid body', async () => {
       const res = await request(app)
         .post('/api/reservations')
@@ -203,6 +304,100 @@ describe('presentation routes (integration)', () => {
       expect(res.status).toBe(200);
       expect(res.body.map((lot: { id: string }) => lot.id)).toEqual([near.id, far.id]);
     });
+
+    it('availableSpaces reflects an active-now capacity override', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create({ ...lotInput, capacity: 5 });
+      // App's injected clock is fixed at 2026-01-01T00:00:00Z; this override is open-ended and started before that.
+      await pool.query(
+        `INSERT INTO capacity_overrides (lot_id, spaces_closed, reason, starts_at, ends_at)
+         VALUES ($1, 2, 'Maintenance', '2025-12-01T00:00:00Z', NULL)`,
+        [lot.id],
+      );
+
+      const res = await request(app).get('/api/lots');
+
+      expect(res.status).toBe(200);
+      expect(res.body.find((l: { id: string }) => l.id === lot.id)?.availableSpaces).toBe(3);
+    });
+
+    it('ignores a capacity override that is not active right now', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create({ ...lotInput, capacity: 5 });
+      // Starts after the app's fixed clock (2026-01-01T00:00:00Z), so it isn't active yet.
+      await pool.query(
+        `INSERT INTO capacity_overrides (lot_id, spaces_closed, reason, starts_at, ends_at)
+         VALUES ($1, 2, 'Future event', '2026-06-01T00:00:00Z', NULL)`,
+        [lot.id],
+      );
+
+      const res = await request(app).get('/api/lots');
+
+      expect(res.status).toBe(200);
+      expect(res.body.find((l: { id: string }) => l.id === lot.id)?.availableSpaces).toBe(5);
+    });
+  });
+
+  describe('GET /api/lots/:id/quote', () => {
+    it('returns the server-computed cost and billed hours for the lot base rate', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create(lotInput);
+
+      const res = await request(app)
+        .get(`/api/lots/${lot.id}/quote`)
+        .query({ startTime: '2026-01-01T10:00:00.000Z', endTime: '2026-01-01T13:30:00.000Z' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ totalCostCents: lotInput.hourlyRateCents * 4, billedHours: 4 });
+    });
+
+    it('applies an active pricing rule to the quote', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create(lotInput);
+      await pool.query(
+        `INSERT INTO pricing_rules (lot_id, day_type, start_hour, end_hour, hourly_rate_cents)
+         VALUES ($1, 'all', 10, 11, 800)`,
+        [lot.id],
+      );
+
+      const res = await request(app)
+        .get(`/api/lots/${lot.id}/quote`)
+        .query({ startTime: '2026-01-01T10:00:00.000Z', endTime: '2026-01-01T12:00:00.000Z' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ totalCostCents: 800 + lotInput.hourlyRateCents, billedHours: 2 });
+    });
+
+    it('returns 400 VALIDATION_ERROR for an invalid window (endTime before startTime)', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create(lotInput);
+
+      const res = await request(app)
+        .get(`/api/lots/${lot.id}/quote`)
+        .query({ startTime: '2026-01-01T12:00:00.000Z', endTime: '2026-01-01T10:00:00.000Z' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 VALIDATION_ERROR for malformed datetime query params', async () => {
+      const lotRepository = new PostgresLotRepository(pool);
+      const lot = await lotRepository.create(lotInput);
+
+      const res = await request(app).get(`/api/lots/${lot.id}/quote`).query({ startTime: 'not-a-date', endTime: '2026-01-01T10:00:00.000Z' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 404 LOT_NOT_FOUND for an unknown but well-formed lot id', async () => {
+      const res = await request(app)
+        .get('/api/lots/00000000-0000-0000-0000-000000000000/quote')
+        .query({ startTime: '2026-01-01T10:00:00.000Z', endTime: '2026-01-01T12:00:00.000Z' });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: { code: 'LOT_NOT_FOUND', message: expect.any(String) } });
+    });
   });
 
   describe('GET /api/lots/:id', () => {
@@ -227,8 +422,17 @@ describe('presentation routes (integration)', () => {
       const adminUserRepository = new PostgresAdminUserRepository(pool);
       const gateway = new MockPaymentGateway(() => 0);
       const clock = new FakeClock(new Date('2026-01-01T00:00:00.000Z'));
-      const lotService = new LotService(lotRepository);
-      const createReservationService = new CreateReservationService(uow, gateway, clock);
+      const pricingRuleRepository = new PostgresPricingRuleRepository(pool);
+      const capacityOverrideRepository = new PostgresCapacityOverrideRepository(pool);
+      const declinedAttemptRepository = new PostgresDeclinedAttemptRepository(pool);
+      const lotService = new LotService(lotRepository, capacityOverrideRepository, pricingRuleRepository, clock);
+      const createReservationService = new CreateReservationService(
+        uow,
+        gateway,
+        clock,
+        pricingRuleRepository,
+        declinedAttemptRepository,
+      );
 
       const limitedApp = createApp({
         lotService,

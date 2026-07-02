@@ -1,16 +1,29 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CreateLotRequest } from '@parking/shared';
 import { LotService } from './lotService.js';
-import { LotNotFoundError } from '../domain/errors.js';
-import { FakeLotRepository, InMemoryDatabase } from './testing/fakes.js';
+import { LotNotFoundError, ValidationError } from '../domain/errors.js';
+import {
+  FakeCapacityOverrideRepository,
+  FakeClock,
+  FakeLotRepository,
+  FakePricingRuleRepository,
+  InMemoryDatabase,
+} from './testing/fakes.js';
 
 describe('LotService', () => {
   let db: InMemoryDatabase;
+  let clock: FakeClock;
   let service: LotService;
 
   beforeEach(() => {
     db = new InMemoryDatabase();
-    service = new LotService(new FakeLotRepository(db));
+    clock = new FakeClock(new Date('2026-07-02T12:00:00.000Z'));
+    service = new LotService(
+      new FakeLotRepository(db),
+      new FakeCapacityOverrideRepository(db),
+      new FakePricingRuleRepository(db),
+      clock,
+    );
   });
 
   describe('list', () => {
@@ -37,6 +50,32 @@ describe('LotService', () => {
       expect(lots).toHaveLength(1);
       expect(lots[0]?.name).toBe('Active Lot');
       expect(lots[0]?.availableSpaces).toBe(9);
+    });
+
+    it('reduces availableSpaces by a capacity override active right now', async () => {
+      const lot = db.seedLot({ name: 'Overridden Lot', capacity: 10, status: 'active' });
+      db.seedCapacityOverride(lot.id, {
+        spacesClosed: 3,
+        startsAt: new Date('2026-07-02T00:00:00.000Z'),
+        endsAt: null,
+      });
+
+      const lots = await service.list();
+
+      expect(lots[0]?.availableSpaces).toBe(7);
+    });
+
+    it('ignores a capacity override that is not active right now', async () => {
+      const lot = db.seedLot({ name: 'Future Override Lot', capacity: 10, status: 'active' });
+      db.seedCapacityOverride(lot.id, {
+        spacesClosed: 3,
+        startsAt: new Date('2026-07-03T00:00:00.000Z'),
+        endsAt: null,
+      });
+
+      const lots = await service.list();
+
+      expect(lots[0]?.availableSpaces).toBe(10);
     });
   });
 
@@ -119,6 +158,36 @@ describe('LotService', () => {
       const lot = db.seedLot({ status: 'deleted' });
 
       await expect(service.remove(lot.id)).rejects.toThrow(LotNotFoundError);
+    });
+  });
+
+  describe('quote', () => {
+    it('prices the window using the lot base rate plus its pricing rules', async () => {
+      const lot = db.seedLot({ hourlyRateCents: 500 });
+      db.seedPricingRule(lot.id, { dayType: 'all', startHour: 10, endHour: 11, hourlyRateCents: 800 });
+
+      const result = await service.quote(
+        lot.id,
+        new Date('2026-07-02T10:00:00.000Z'),
+        new Date('2026-07-02T12:00:00.000Z'),
+      );
+
+      expect(result.totalCostCents).toBe(1300);
+      expect(result.billedHours).toBe(2);
+    });
+
+    it('throws LotNotFoundError for an unknown lot', async () => {
+      await expect(
+        service.quote('nonexistent', new Date('2026-07-02T10:00:00.000Z'), new Date('2026-07-02T12:00:00.000Z')),
+      ).rejects.toThrow(LotNotFoundError);
+    });
+
+    it('throws ValidationError when endTime is not after startTime', async () => {
+      const lot = db.seedLot({ hourlyRateCents: 500 });
+
+      await expect(
+        service.quote(lot.id, new Date('2026-07-02T12:00:00.000Z'), new Date('2026-07-02T10:00:00.000Z')),
+      ).rejects.toThrow(ValidationError);
     });
   });
 });

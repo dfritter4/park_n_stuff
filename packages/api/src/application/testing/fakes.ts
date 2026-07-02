@@ -2,10 +2,16 @@ import { randomUUID } from 'node:crypto';
 import type {
   AdminUserRecord,
   AdminUserRepository,
+  CapacityOverrideRecord,
+  CapacityOverrideRepository,
   Clock,
+  DeclinedAttemptRecord,
+  DeclinedAttemptRepository,
   LotRecord,
   LotRepository,
   PaymentGateway,
+  PricingRuleRecord,
+  PricingRuleRepository,
   ReservationRecord,
   ReservationRepository,
   ReservationTxn,
@@ -17,10 +23,19 @@ import type {
  * Tests construct one InMemoryDatabase and wire it into whichever fakes they need,
  * so writes made through the reservation flow are visible to the lot/reservation reads.
  */
+export interface FakeCustomerRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  flagged: boolean;
+  flagReason: string | null;
+}
+
 export class InMemoryDatabase {
   readonly lots = new Map<string, LotRecord>();
   readonly reservations = new Map<string, ReservationRecord>();
-  readonly customers = new Map<string, { id: string; name: string; email: string; phone: string }>();
+  readonly customers = new Map<string, FakeCustomerRecord>();
   readonly payments: Array<{
     reservationId: string;
     amountCents: number;
@@ -28,6 +43,9 @@ export class InMemoryDatabase {
     transactionId: string;
     cardLast4: string;
   }> = [];
+  readonly pricingRules: PricingRuleRecord[] = [];
+  readonly capacityOverrides: CapacityOverrideRecord[] = [];
+  readonly declinedAttempts: DeclinedAttemptRecord[] = [];
 
   seedLot(overrides: Partial<LotRecord> = {}): LotRecord {
     const lot: LotRecord = {
@@ -45,6 +63,53 @@ export class InMemoryDatabase {
     };
     this.lots.set(lot.id, lot);
     return lot;
+  }
+
+  seedCustomer(overrides: Partial<FakeCustomerRecord> = {}): FakeCustomerRecord {
+    const customer: FakeCustomerRecord = {
+      id: randomUUID(),
+      name: 'Existing Customer',
+      email: 'existing@example.com',
+      phone: '5550000000',
+      flagged: false,
+      flagReason: null,
+      ...overrides,
+    };
+    this.customers.set(customer.id, customer);
+    return customer;
+  }
+
+  seedPricingRule(lotId: string, overrides: Partial<Omit<PricingRuleRecord, 'id' | 'lotId'>> = {}): PricingRuleRecord {
+    const rule: PricingRuleRecord = {
+      id: randomUUID(),
+      lotId,
+      dayType: 'all',
+      startHour: 0,
+      endHour: 24,
+      hourlyRateCents: 1000,
+      createdAt: new Date(),
+      ...overrides,
+    };
+    this.pricingRules.push(rule);
+    return rule;
+  }
+
+  seedCapacityOverride(
+    lotId: string,
+    overrides: Partial<Omit<CapacityOverrideRecord, 'id' | 'lotId'>> = {},
+  ): CapacityOverrideRecord {
+    const override: CapacityOverrideRecord = {
+      id: randomUUID(),
+      lotId,
+      spacesClosed: 1,
+      reason: null,
+      startsAt: new Date('2020-01-01T00:00:00Z'),
+      endsAt: null,
+      createdAt: new Date(),
+      ...overrides,
+    };
+    this.capacityOverrides.push(override);
+    return override;
   }
 
   activeReservationCount(lotId: string): number {
@@ -102,7 +167,7 @@ export class FakeLotRepository implements LotRepository {
  * mirroring a rolled-back Postgres transaction.
  */
 class StagedReservationTxn implements ReservationTxn {
-  private stagedCustomer: { id: string; name: string; email: string; phone: string } | undefined;
+  private stagedCustomer: FakeCustomerRecord | undefined;
   private stagedReservation: ReservationRecord | undefined;
   private stagedPayment:
     | {
@@ -136,10 +201,28 @@ class StagedReservationTxn implements ReservationTxn {
     return count;
   }
 
+  async listActiveCapacityOverrides(lotId: string, start: Date, end: Date): Promise<CapacityOverrideRecord[]> {
+    return this.db.capacityOverrides.filter(
+      (override) => override.lotId === lotId && override.startsAt < end && (override.endsAt === null || override.endsAt > start),
+    );
+  }
+
+  async findCustomerByEmail(email: string): Promise<{ id: string; flagged: boolean } | null> {
+    const existing = [...this.db.customers.values()].find((customer) => customer.email === email);
+    return existing ? { id: existing.id, flagged: existing.flagged } : null;
+  }
+
   async upsertCustomer(c: { name: string; email: string; phone: string }): Promise<{ id: string }> {
     const existing = [...this.db.customers.values()].find((customer) => customer.email === c.email);
     const id = existing?.id ?? randomUUID();
-    this.stagedCustomer = { id, name: c.name, email: c.email, phone: c.phone };
+    this.stagedCustomer = {
+      id,
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      flagged: existing?.flagged ?? false,
+      flagReason: existing?.flagReason ?? null,
+    };
     return { id };
   }
 
@@ -247,6 +330,82 @@ export class FakeAdminUserRepository implements AdminUserRepository {
     const admin: AdminUserRecord = { id: randomUUID(), email, passwordHash };
     this.usersByEmail.set(email, admin);
     return admin;
+  }
+}
+
+export class FakePricingRuleRepository implements PricingRuleRepository {
+  constructor(private readonly db: InMemoryDatabase) {}
+
+  async listByLot(lotId: string): Promise<PricingRuleRecord[]> {
+    return this.db.pricingRules.filter((rule) => rule.lotId === lotId);
+  }
+
+  async create(
+    lotId: string,
+    data: Omit<PricingRuleRecord, 'id' | 'lotId' | 'createdAt'>,
+  ): Promise<PricingRuleRecord> {
+    const rule: PricingRuleRecord = { ...data, id: randomUUID(), lotId, createdAt: new Date() };
+    this.db.pricingRules.push(rule);
+    return rule;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const index = this.db.pricingRules.findIndex((rule) => rule.id === id);
+    if (index === -1) return false;
+    this.db.pricingRules.splice(index, 1);
+    return true;
+  }
+}
+
+export class FakeCapacityOverrideRepository implements CapacityOverrideRepository {
+  constructor(private readonly db: InMemoryDatabase) {}
+
+  async listByLot(lotId: string): Promise<CapacityOverrideRecord[]> {
+    return this.db.capacityOverrides.filter((override) => override.lotId === lotId);
+  }
+
+  async listActiveForWindow(lotId: string, start: Date, end: Date): Promise<CapacityOverrideRecord[]> {
+    return this.db.capacityOverrides.filter(
+      (override) => override.lotId === lotId && override.startsAt < end && (override.endsAt === null || override.endsAt > start),
+    );
+  }
+
+  async create(
+    lotId: string,
+    data: Omit<CapacityOverrideRecord, 'id' | 'lotId' | 'createdAt'>,
+  ): Promise<CapacityOverrideRecord> {
+    const override: CapacityOverrideRecord = { ...data, id: randomUUID(), lotId, createdAt: new Date() };
+    this.db.capacityOverrides.push(override);
+    return override;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const index = this.db.capacityOverrides.findIndex((override) => override.id === id);
+    if (index === -1) return false;
+    this.db.capacityOverrides.splice(index, 1);
+    return true;
+  }
+}
+
+export class FakeDeclinedAttemptRepository implements DeclinedAttemptRepository {
+  constructor(private readonly db: InMemoryDatabase) {}
+
+  async insert(data: { lotId: string; amountCents: number; cardLast4: string }): Promise<void> {
+    const lot = this.db.lots.get(data.lotId);
+    this.db.declinedAttempts.push({
+      id: randomUUID(),
+      lotId: data.lotId,
+      lotName: lot?.name ?? '',
+      amountCents: data.amountCents,
+      cardLast4: data.cardLast4,
+      createdAt: new Date(),
+    });
+  }
+
+  async listSince(since: Date): Promise<DeclinedAttemptRecord[]> {
+    return this.db.declinedAttempts
+      .filter((attempt) => attempt.createdAt >= since)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }
 

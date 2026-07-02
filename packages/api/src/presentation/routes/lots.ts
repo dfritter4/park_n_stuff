@@ -1,10 +1,18 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { CreateLotRequestSchema, UpdateLotRequestSchema } from '@parking/shared';
 import type { LotService } from '../../application/lotService.js';
 import { ValidationError } from '../../domain/errors.js';
 import { haversineDistanceKm } from '../geo.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { validateBody, validateUuidParam } from '../middleware/validate.js';
+
+const QuoteQuerySchema = z
+  .object({
+    startTime: z.string().datetime(),
+    endTime: z.string().datetime(),
+  })
+  .refine((d) => new Date(d.endTime) > new Date(d.startTime), { message: 'endTime must be after startTime' });
 
 function parseCoordinate(value: unknown, paramName: string): number {
   const num = Number(value);
@@ -53,6 +61,24 @@ export function createLotsRouter(lotService: LotService, jwtSecret: string): Rou
     try {
       const lot = await lotService.getById(req.params.id);
       res.json(lot);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/quote', validateUuidParam('id'), async (req, res, next) => {
+    try {
+      const parsed = QuoteQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        next(parsed.error);
+        return;
+      }
+      const quote = await lotService.quote(
+        req.params.id,
+        new Date(parsed.data.startTime),
+        new Date(parsed.data.endTime),
+      );
+      res.json(quote);
     } catch (err) {
       next(err);
     }

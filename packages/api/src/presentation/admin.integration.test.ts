@@ -5,7 +5,10 @@ import request from 'supertest';
 import type { Express } from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPool } from '../infrastructure/db.js';
+import { PostgresCapacityOverrideRepository } from '../infrastructure/postgres/capacityOverrideRepository.js';
+import { PostgresDeclinedAttemptRepository } from '../infrastructure/postgres/declinedAttemptRepository.js';
 import { PostgresLotRepository } from '../infrastructure/postgres/lotRepository.js';
+import { PostgresPricingRuleRepository } from '../infrastructure/postgres/pricingRuleRepository.js';
 import { PostgresReservationUnitOfWork } from '../infrastructure/postgres/reservationUnitOfWork.js';
 import { PostgresReservationRepository } from '../infrastructure/postgres/reservationRepository.js';
 import { PostgresAdminUserRepository } from '../infrastructure/postgres/adminUserRepository.js';
@@ -48,8 +51,18 @@ describe('admin auth + protected lot mutations (integration)', () => {
     const gateway = new MockPaymentGateway(() => 0);
     const clock = new FakeClock(new Date('2026-01-01T00:00:00.000Z'));
 
-    const lotService = new LotService(lotRepository);
-    const createReservationService = new CreateReservationService(uow, gateway, clock);
+    const pricingRuleRepository = new PostgresPricingRuleRepository(pool);
+    const capacityOverrideRepository = new PostgresCapacityOverrideRepository(pool);
+    const declinedAttemptRepository = new PostgresDeclinedAttemptRepository(pool);
+
+    const lotService = new LotService(lotRepository, capacityOverrideRepository, pricingRuleRepository, clock);
+    const createReservationService = new CreateReservationService(
+      uow,
+      gateway,
+      clock,
+      pricingRuleRepository,
+      declinedAttemptRepository,
+    );
     const analyticsService = new AnalyticsService(analyticsRepository);
 
     app = createApp({

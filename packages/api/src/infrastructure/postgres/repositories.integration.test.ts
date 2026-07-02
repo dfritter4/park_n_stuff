@@ -7,6 +7,9 @@ import { PostgresLotRepository } from './lotRepository.js';
 import { PostgresReservationUnitOfWork } from './reservationUnitOfWork.js';
 import { PostgresReservationRepository } from './reservationRepository.js';
 import { PostgresAdminUserRepository } from './adminUserRepository.js';
+import { PostgresPricingRuleRepository } from './pricingRuleRepository.js';
+import { PostgresCapacityOverrideRepository } from './capacityOverrideRepository.js';
+import { PostgresDeclinedAttemptRepository } from './declinedAttemptRepository.js';
 import { MockPaymentGateway } from '../mockPaymentGateway.js';
 import { CreateReservationService } from '../../application/createReservation.js';
 import { FakeClock } from '../../application/testing/fakes.js';
@@ -30,6 +33,9 @@ describe('Postgres repositories', () => {
   let uow: PostgresReservationUnitOfWork;
   let reservationRepository: PostgresReservationRepository;
   let adminUserRepository: PostgresAdminUserRepository;
+  let pricingRuleRepository: PostgresPricingRuleRepository;
+  let capacityOverrideRepository: PostgresCapacityOverrideRepository;
+  let declinedAttemptRepository: PostgresDeclinedAttemptRepository;
 
   beforeAll(() => {
     pool = createPool(DATABASE_URL);
@@ -37,6 +43,9 @@ describe('Postgres repositories', () => {
     uow = new PostgresReservationUnitOfWork(pool);
     reservationRepository = new PostgresReservationRepository(pool);
     adminUserRepository = new PostgresAdminUserRepository(pool);
+    pricingRuleRepository = new PostgresPricingRuleRepository(pool);
+    capacityOverrideRepository = new PostgresCapacityOverrideRepository(pool);
+    declinedAttemptRepository = new PostgresDeclinedAttemptRepository(pool);
   });
 
   beforeEach(async () => {
@@ -149,7 +158,7 @@ describe('Postgres repositories', () => {
       const lot = await lotRepository.create({ ...lotInput, capacity: 1 });
       const gateway = new MockPaymentGateway(() => 0);
       const clock = new FakeClock();
-      const service = new CreateReservationService(uow, gateway, clock);
+      const service = new CreateReservationService(uow, gateway, clock, pricingRuleRepository, declinedAttemptRepository);
 
       const buildRequest = (licensePlate: string, email: string): CreateReservationRequest => ({
         lotId: lot.id,
@@ -188,7 +197,7 @@ describe('Postgres repositories', () => {
       const lot = await lotRepository.create(lotInput);
       const gateway = new MockPaymentGateway(() => 0);
       const clock = new FakeClock();
-      const service = new CreateReservationService(uow, gateway, clock);
+      const service = new CreateReservationService(uow, gateway, clock, pricingRuleRepository, declinedAttemptRepository);
 
       const { reservationId } = await service.execute({
         lotId: lot.id,
@@ -226,6 +235,114 @@ describe('Postgres repositories', () => {
 
     it('returns null for an unknown email', async () => {
       expect(await adminUserRepository.findByEmail('missing@example.com')).toBeNull();
+    });
+  });
+
+  describe('PostgresPricingRuleRepository', () => {
+    it('round-trips create/listByLot/delete', async () => {
+      const lot = await lotRepository.create({ ...lotInput, name: 'Pricing Rule Repo Lot' });
+
+      const created = await pricingRuleRepository.create(lot.id, {
+        dayType: 'weekday',
+        startHour: 7,
+        endHour: 19,
+        hourlyRateCents: 1500,
+      });
+      expect(created.id).toBeDefined();
+      expect(created.lotId).toBe(lot.id);
+
+      const rules = await pricingRuleRepository.listByLot(lot.id);
+      expect(rules).toHaveLength(1);
+      expect(rules[0]).toMatchObject({ dayType: 'weekday', startHour: 7, endHour: 19, hourlyRateCents: 1500 });
+
+      expect(await pricingRuleRepository.delete(created.id)).toBe(true);
+      expect(await pricingRuleRepository.listByLot(lot.id)).toHaveLength(0);
+      expect(await pricingRuleRepository.delete(created.id)).toBe(false);
+    });
+  });
+
+  describe('PostgresCapacityOverrideRepository', () => {
+    it('round-trips create/listByLot/delete, and listActiveForWindow excludes touching boundaries', async () => {
+      const lot = await lotRepository.create({ ...lotInput, name: 'Capacity Override Repo Lot' });
+
+      const created = await capacityOverrideRepository.create(lot.id, {
+        spacesClosed: 2,
+        reason: 'Event',
+        startsAt: new Date('2026-01-01T10:00:00Z'),
+        endsAt: new Date('2026-01-01T12:00:00Z'),
+      });
+      expect(created.id).toBeDefined();
+
+      expect(await capacityOverrideRepository.listByLot(lot.id)).toHaveLength(1);
+
+      const overlapping = await capacityOverrideRepository.listActiveForWindow(
+        lot.id,
+        new Date('2026-01-01T11:00:00Z'),
+        new Date('2026-01-01T13:00:00Z'),
+      );
+      expect(overlapping).toHaveLength(1);
+
+      const touching = await capacityOverrideRepository.listActiveForWindow(
+        lot.id,
+        new Date('2026-01-01T12:00:00Z'),
+        new Date('2026-01-01T14:00:00Z'),
+      );
+      expect(touching).toHaveLength(0);
+
+      expect(await capacityOverrideRepository.delete(created.id)).toBe(true);
+      expect(await capacityOverrideRepository.listByLot(lot.id)).toHaveLength(0);
+    });
+  });
+
+  describe('PostgresDeclinedAttemptRepository', () => {
+    it('inserts attempts and listSince returns them newest-first with the joined lot name', async () => {
+      const lot = await lotRepository.create({ ...lotInput, name: 'Declined Attempt Repo Lot' });
+
+      await declinedAttemptRepository.insert({ lotId: lot.id, amountCents: 1000, cardLast4: '0002' });
+      await declinedAttemptRepository.insert({ lotId: lot.id, amountCents: 2000, cardLast4: '0002' });
+
+      const attempts = await declinedAttemptRepository.listSince(new Date('2020-01-01T00:00:00Z'));
+      expect(attempts).toHaveLength(2);
+      expect(attempts[0]?.lotName).toBe(lot.name);
+      expect(attempts.map((a) => a.amountCents).sort()).toEqual([1000, 2000]);
+
+      expect(await declinedAttemptRepository.listSince(new Date('2099-01-01T00:00:00Z'))).toHaveLength(0);
+    });
+  });
+
+  describe('ReservationTxn P2 extensions', () => {
+    it('listActiveCapacityOverrides reads overrides overlapping [start, end) inside the transaction', async () => {
+      const lot = await lotRepository.create({ ...lotInput, name: 'Txn Overrides Lot' });
+      await capacityOverrideRepository.create(lot.id, {
+        spacesClosed: 3,
+        reason: null,
+        startsAt: new Date('2026-01-01T09:00:00Z'),
+        endsAt: new Date('2026-01-01T11:00:00Z'),
+      });
+
+      const overrides = await uow.execute(lot.id, (txn) =>
+        txn.listActiveCapacityOverrides(lot.id, new Date('2026-01-01T10:00:00Z'), new Date('2026-01-01T12:00:00Z')),
+      );
+      expect(overrides).toHaveLength(1);
+      expect(overrides[0]?.spacesClosed).toBe(3);
+
+      const nonOverlapping = await uow.execute(lot.id, (txn) =>
+        txn.listActiveCapacityOverrides(lot.id, new Date('2026-01-01T11:00:00Z'), new Date('2026-01-01T13:00:00Z')),
+      );
+      expect(nonOverlapping).toHaveLength(0);
+    });
+
+    it('findCustomerByEmail returns the flagged status, and null for an unknown email', async () => {
+      const lot = await lotRepository.create({ ...lotInput, name: 'Txn Customer Lookup Lot' });
+      await pool.query(
+        `INSERT INTO customers (name, email, phone, flagged, flag_reason) VALUES ('Flagged Guy', 'flagged@example.com', '555-0100', true, 'chargebacks')`,
+      );
+
+      const found = await uow.execute(lot.id, (txn) => txn.findCustomerByEmail('flagged@example.com'));
+      expect(found?.flagged).toBe(true);
+
+      const notFound = await uow.execute(lot.id, (txn) => txn.findCustomerByEmail('nobody@example.com'));
+      expect(notFound).toBeNull();
     });
   });
 });

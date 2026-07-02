@@ -7,7 +7,10 @@ import { createPool } from './infrastructure/db.js';
 import { MockPaymentGateway } from './infrastructure/mockPaymentGateway.js';
 import { PostgresAdminUserRepository } from './infrastructure/postgres/adminUserRepository.js';
 import { PostgresAnalyticsRepository } from './infrastructure/postgres/analyticsRepository.js';
+import { PostgresCapacityOverrideRepository } from './infrastructure/postgres/capacityOverrideRepository.js';
+import { PostgresDeclinedAttemptRepository } from './infrastructure/postgres/declinedAttemptRepository.js';
 import { PostgresLotRepository } from './infrastructure/postgres/lotRepository.js';
+import { PostgresPricingRuleRepository } from './infrastructure/postgres/pricingRuleRepository.js';
 import { PostgresReservationRepository } from './infrastructure/postgres/reservationRepository.js';
 import { PostgresReservationUnitOfWork } from './infrastructure/postgres/reservationUnitOfWork.js';
 import { createApp } from './presentation/app.js';
@@ -22,10 +25,19 @@ const reservationUnitOfWork = new PostgresReservationUnitOfWork(pool);
 const reservationRepository = new PostgresReservationRepository(pool);
 const adminUserRepository = new PostgresAdminUserRepository(pool);
 const analyticsRepository = new PostgresAnalyticsRepository(pool);
+const pricingRuleRepository = new PostgresPricingRuleRepository(pool);
+const capacityOverrideRepository = new PostgresCapacityOverrideRepository(pool);
+const declinedAttemptRepository = new PostgresDeclinedAttemptRepository(pool);
 const paymentGateway = new MockPaymentGateway();
 
-const lotService = new LotService(lotRepository);
-const createReservationService = new CreateReservationService(reservationUnitOfWork, paymentGateway, systemClock);
+const lotService = new LotService(lotRepository, capacityOverrideRepository, pricingRuleRepository, systemClock);
+const createReservationService = new CreateReservationService(
+  reservationUnitOfWork,
+  paymentGateway,
+  systemClock,
+  pricingRuleRepository,
+  declinedAttemptRepository,
+);
 const analyticsService = new AnalyticsService(analyticsRepository);
 
 const app = createApp({
@@ -37,9 +49,11 @@ const app = createApp({
   jwtSecret: config.jwtSecret,
   corsOrigins: config.corsOrigins,
   lotRepository,
+  pricingRuleRepository,
+  capacityOverrideRepository,
+  declinedAttemptRepository,
   clock: systemClock,
-  // adminReservationRepository, adminCustomerRepository, pricingRuleRepository,
-  // capacityOverrideRepository, declinedAttemptRepository: wired in by P3/P4/P6
+  // adminReservationRepository, adminCustomerRepository: wired in by P3/P4
   // once their Postgres-backed implementations exist; until then the
   // corresponding admin routers stay 501 stubs.
 });

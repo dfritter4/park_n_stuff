@@ -17,7 +17,7 @@ export interface HourlyRateRule {
   hourlyRateCents: number;
 }
 
-function billedHoursFor(startTime: Date, endTime: Date): number {
+export function billedHoursFor(startTime: Date, endTime: Date): number {
   if (endTime <= startTime) {
     throw new ValidationError('End time must be after start time');
   }
