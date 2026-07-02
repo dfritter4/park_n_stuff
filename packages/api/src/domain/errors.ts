@@ -74,3 +74,21 @@ export class PricingRuleOverlapError extends DomainError {
     super('PRICING_RULE_OVERLAP', message, 409);
   }
 }
+
+export class CustomerNotFoundError extends DomainError {
+  constructor(message = 'Customer not found') {
+    super('CUSTOMER_NOT_FOUND', message, 404);
+  }
+}
+
+export class PricingRuleNotFoundError extends DomainError {
+  constructor(message = 'Pricing rule not found') {
+    super('PRICING_RULE_NOT_FOUND', message, 404);
+  }
+}
+
+export class CapacityOverrideNotFoundError extends DomainError {
+  constructor(message = 'Capacity override not found') {
+    super('CAPACITY_OVERRIDE_NOT_FOUND', message, 404);
+  }
+}

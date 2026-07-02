@@ -5,6 +5,8 @@ import type { Clock } from './application/ports.js';
 import { loadConfig } from './config.js';
 import { createPool } from './infrastructure/db.js';
 import { MockPaymentGateway } from './infrastructure/mockPaymentGateway.js';
+import { PostgresAdminCustomerRepository } from './infrastructure/postgres/adminCustomerRepository.js';
+import { PostgresAdminReservationRepository } from './infrastructure/postgres/adminReservationRepository.js';
 import { PostgresAdminUserRepository } from './infrastructure/postgres/adminUserRepository.js';
 import { PostgresAnalyticsRepository } from './infrastructure/postgres/analyticsRepository.js';
 import { PostgresCapacityOverrideRepository } from './infrastructure/postgres/capacityOverrideRepository.js';
@@ -28,6 +30,8 @@ const analyticsRepository = new PostgresAnalyticsRepository(pool);
 const pricingRuleRepository = new PostgresPricingRuleRepository(pool);
 const capacityOverrideRepository = new PostgresCapacityOverrideRepository(pool);
 const declinedAttemptRepository = new PostgresDeclinedAttemptRepository(pool);
+const adminCustomerRepository = new PostgresAdminCustomerRepository(pool);
+const adminReservationRepository = new PostgresAdminReservationRepository(pool);
 const paymentGateway = new MockPaymentGateway();
 
 const lotService = new LotService(lotRepository, capacityOverrideRepository, pricingRuleRepository, systemClock);
@@ -52,10 +56,9 @@ const app = createApp({
   pricingRuleRepository,
   capacityOverrideRepository,
   declinedAttemptRepository,
+  adminCustomerRepository,
+  adminReservationRepository,
   clock: systemClock,
-  // adminReservationRepository, adminCustomerRepository: wired in by P3/P4
-  // once their Postgres-backed implementations exist; until then the
-  // corresponding admin routers stay 501 stubs.
 });
 
 app.listen(config.port, () => {
