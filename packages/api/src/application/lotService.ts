@@ -28,11 +28,7 @@ export class LotService {
   }
 
   async getById(id: string): Promise<Lot> {
-    const record = await this.lots.findById(id);
-    if (!record || record.status === 'deleted') {
-      throw new LotNotFoundError();
-    }
-    return toLot(record);
+    return toLot(await this.requireActiveRecord(id));
   }
 
   async create(req: CreateLotRequest): Promise<Lot> {
@@ -49,6 +45,7 @@ export class LotService {
   }
 
   async update(id: string, req: UpdateLotRequest): Promise<Lot> {
+    await this.requireActiveRecord(id);
     const updated = await this.lots.update(id, req);
     if (!updated) {
       throw new LotNotFoundError();
@@ -61,9 +58,18 @@ export class LotService {
   }
 
   async remove(id: string): Promise<void> {
+    await this.requireActiveRecord(id);
     const deleted = await this.lots.softDelete(id);
     if (!deleted) {
       throw new LotNotFoundError();
     }
+  }
+
+  private async requireActiveRecord(id: string): Promise<LotRecord & { activeReservations: number }> {
+    const record = await this.lots.findById(id);
+    if (!record || record.status === 'deleted') {
+      throw new LotNotFoundError();
+    }
+    return record;
   }
 }

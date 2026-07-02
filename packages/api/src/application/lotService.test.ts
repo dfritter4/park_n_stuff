@@ -94,6 +94,12 @@ describe('LotService', () => {
     it('throws LotNotFoundError when the lot is missing', async () => {
       await expect(service.update('nonexistent', { hourlyRateCents: 999 })).rejects.toThrow(LotNotFoundError);
     });
+
+    it('throws LotNotFoundError when the lot is soft-deleted', async () => {
+      const lot = db.seedLot({ status: 'deleted' });
+
+      await expect(service.update(lot.id, { hourlyRateCents: 999 })).rejects.toThrow(LotNotFoundError);
+    });
   });
 
   describe('remove', () => {
@@ -107,6 +113,12 @@ describe('LotService', () => {
 
     it('throws LotNotFoundError when the lot is missing', async () => {
       await expect(service.remove('nonexistent')).rejects.toThrow(LotNotFoundError);
+    });
+
+    it('throws LotNotFoundError when the lot is already deleted', async () => {
+      const lot = db.seedLot({ status: 'deleted' });
+
+      await expect(service.remove(lot.id)).rejects.toThrow(LotNotFoundError);
     });
   });
 });
