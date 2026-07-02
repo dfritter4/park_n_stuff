@@ -9,7 +9,7 @@ import type {
 } from '../../application/ports.js';
 import { queryActiveCapacityOverrides } from './capacityOverrideRepository.js';
 
-interface LotRow {
+export interface LotRow {
   id: string;
   name: string;
   address: string;
@@ -22,7 +22,8 @@ interface LotRow {
   created_at: Date;
 }
 
-function mapLotRow(row: LotRow): LotRecord {
+/** Exported so other admin/postgres repositories (e.g. AdminReservationRepository) reuse this mapping instead of duplicating it. */
+export function mapLotRow(row: LotRow): LotRecord {
   return {
     id: row.id,
     name: row.name,
@@ -37,7 +38,7 @@ function mapLotRow(row: LotRow): LotRecord {
   };
 }
 
-interface ReservationRow {
+export interface ReservationRow {
   id: string;
   reservation_number: string;
   lot_id: string;
@@ -52,7 +53,8 @@ interface ReservationRow {
   created_at: Date;
 }
 
-function mapReservationRow(row: ReservationRow): ReservationRecord {
+/** Exported so other admin/postgres repositories (e.g. AdminReservationRepository) reuse this mapping instead of duplicating it. */
+export function mapReservationRow(row: ReservationRow): ReservationRecord {
   return {
     id: row.id,
     reservationNumber: row.reservation_number,

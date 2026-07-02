@@ -191,6 +191,14 @@ export interface AdminReservationTxn {
   getReservationForUpdate(id: string): Promise<(ReservationRecord & { lotId: string }) | null>;
   getLotForUpdate(lotId: string): Promise<LotRecord | null>;
   countActiveOverlapping(lotId: string, start: Date, end: Date, excludeReservationId?: string): Promise<number>;
+  /**
+   * Capacity overrides overlapping [start, end), read via the same client as
+   * the lot's FOR UPDATE lock (P3 extension — mirrors
+   * ReservationTxn.listActiveCapacityOverrides exactly) so the extend flow's
+   * capacity gate over the delta window [oldEnd,newEnd) sees a snapshot no
+   * staler than the lock, consistent with the create-reservation flow.
+   */
+  listActiveCapacityOverrides(lotId: string, start: Date, end: Date): Promise<CapacityOverrideRecord[]>;
   getOriginalCardLast4(reservationId: string): Promise<string | null>;
   cancelReservation(id: string): Promise<void>;
   refundSucceededPayments(reservationId: string): Promise<void>;
