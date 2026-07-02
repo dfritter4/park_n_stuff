@@ -1,0 +1,58 @@
+import type { SeedLot } from './generateHistory.js';
+
+export const LOTS: readonly SeedLot[] = [
+  {
+    name: 'Loop Premier Garage',
+    address: '200 W Madison St, Chicago, IL',
+    neighborhood: 'Loop',
+    lat: 41.879,
+    lng: -87.6298,
+    capacity: 250,
+    hourlyRateCents: 1200,
+  },
+  {
+    name: 'River North Self Park',
+    address: '401 N Wabash Ave, Chicago, IL',
+    neighborhood: 'River North',
+    lat: 41.8925,
+    lng: -87.635,
+    capacity: 180,
+    hourlyRateCents: 1000,
+  },
+  {
+    name: 'West Loop Lot',
+    address: '1000 W Randolph St, Chicago, IL',
+    neighborhood: 'West Loop',
+    lat: 41.882,
+    lng: -87.652,
+    capacity: 120,
+    hourlyRateCents: 800,
+  },
+  {
+    name: 'Wicker Park Lot',
+    address: '1500 N Milwaukee Ave, Chicago, IL',
+    neighborhood: 'Wicker Park',
+    lat: 41.9088,
+    lng: -87.6796,
+    capacity: 80,
+    hourlyRateCents: 500,
+  },
+  {
+    name: 'Lincoln Park Garage',
+    address: '2500 N Clark St, Chicago, IL',
+    neighborhood: 'Lincoln Park',
+    lat: 41.9214,
+    lng: -87.6513,
+    capacity: 100,
+    hourlyRateCents: 600,
+  },
+  {
+    name: 'Hyde Park Lot',
+    address: '1500 E 53rd St, Chicago, IL',
+    neighborhood: 'Hyde Park',
+    lat: 41.7943,
+    lng: -87.5907,
+    capacity: 60,
+    hourlyRateCents: 250,
+  },
+];
