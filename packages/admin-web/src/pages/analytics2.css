@@ -30,7 +30,11 @@
     grid-template-columns: 1fr;
   }
 
-  .analytics-card {
+  .analytics-card,
+  .analytics-card.span-12,
+  .analytics-card.span-7,
+  .analytics-card.span-6,
+  .analytics-card.span-5 {
     grid-column: 1 / -1;
   }
 }
@@ -148,6 +152,8 @@
 }
 
 .declines-recent-table tbody tr:hover {
+  /* Matches the hardcoded hover color used by `.data-table tbody tr:hover` etc.
+     in index.css (no design token exists for it yet). */
   background: #f8f9fd;
 }
 
