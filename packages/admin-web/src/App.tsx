@@ -10,6 +10,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { ReservationsPage } from './pages/ReservationsPage';
 import { ReservationDetailPage } from './pages/ReservationDetailPage';
 import { CustomersPage } from './pages/CustomersPage';
+import { CustomerDetailPage } from './pages/CustomerDetailPage';
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ export function App() {
               <Route path="/reservations" element={<ReservationsPage />} />
               <Route path="/reservations/:id" element={<ReservationDetailPage />} />
               <Route path="/customers" element={<CustomersPage />} />
+              <Route path="/customers/:id" element={<CustomerDetailPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
             </Route>
           </Routes>

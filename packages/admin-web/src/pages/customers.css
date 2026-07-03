@@ -1,0 +1,90 @@
+/* Customers page */
+
+.customers-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.customers-page-header h2 {
+  margin: 0;
+}
+
+.customers-search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.customers-search-bar .form-field {
+  margin-bottom: 0;
+  min-width: 220px;
+}
+
+.customers-search-bar button[type='submit'] {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  background: #4f8cff;
+  color: #ffffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Customer detail page */
+
+.customer-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.customer-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.customer-detail-header a {
+  font-size: 0.85rem;
+  color: #4f8cff;
+  text-decoration: none;
+}
+
+.customer-detail-header h2 {
+  margin: 0.35rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.customer-detail-actions button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.customer-detail-page .detail-grid dd {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-field textarea {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 4.5rem;
+}
