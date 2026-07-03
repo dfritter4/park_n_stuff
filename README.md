@@ -1,10 +1,39 @@
 # Park N Stuff
 
 A parking reservation proof-of-concept: customers browse parking lots on a
-map, reserve a spot, and pay with a (mocked) card; admins manage lots and
-view revenue/occupancy analytics. Built as an npm-workspaces monorepo with a
-clean-architecture Express API and two independent Vite/React single-page
-apps.
+map, reserve a spot, and pay with a (mocked) card, with server-quoted,
+time-of-day-aware pricing; admins manage lots, pricing rules and capacity
+overrides, reservations and customers, and view revenue/occupancy analytics
+including a weekly heatmap, week-over-week and lot-over-lot comparisons, an
+occupancy forecast, and a declined-payments report. Built as an
+npm-workspaces monorepo with a clean-architecture Express API and two
+independent Vite/React single-page apps.
+
+## Phase 2 features
+
+- **Rule-based pricing & server quotes** — lots can define hourly-rate rules
+  keyed on day type (weekday/weekend/all) and an hour-of-day window (UTC);
+  `GET /api/lots/:id/quote` returns the server-authoritative cost for a
+  window, and the customer reserve flow calls it (debounced) so the price
+  shown always matches what gets charged.
+- **Capacity overrides** — admins can temporarily close off a number of
+  spaces at a lot (maintenance, events, etc.); availability and the
+  reservation capacity gate both account for active overrides.
+- **Admin reservation management** — filterable/paginated reservation list
+  (lot, status, date range, search, "active now"), a detail view with
+  customer and payment info, cancel (refunds all succeeded payments), extend
+  (re-prices the delta window and re-checks capacity), and a per-lot
+  "in lot now" view.
+- **Admin customer management** — searchable/paginated customer list with
+  reservation counts and lifetime spend (succeeded payments only), a detail
+  view with reservation history, and flag/unflag with a reason; a flagged
+  customer's email is blocked from creating new reservations.
+- **Analytics upgrades** — a 7×24 occupancy heatmap, this-week-vs-last-week
+  and lot-vs-lot comparisons, a next-7-days occupancy forecast, and a
+  declined-payments report (count/amount by day plus recent attempts).
+- **Customer app visual polish** — a cohesive design system (type scale,
+  color palette, spacing/radii/shadows), refined lot cards, form and payment
+  styling, a celebratory confirmation receipt, and loading skeletons.
 
 ## Architecture
 
@@ -45,9 +74,16 @@ implementations are wired to application services.
 | GET | `/api/health` | none |
 | GET | `/api/lots` | none |
 | GET | `/api/lots/:id` | none |
+| GET | `/api/lots/:id/quote` | none |
 | POST | `/api/lots` | admin |
 | PUT | `/api/lots/:id` | admin |
 | DELETE | `/api/lots/:id` | admin |
+| GET | `/api/lots/:id/pricing-rules` | none |
+| POST | `/api/lots/:id/pricing-rules` | admin |
+| DELETE | `/api/pricing-rules/:ruleId` | admin |
+| GET | `/api/lots/:id/capacity-overrides` | admin |
+| POST | `/api/lots/:id/capacity-overrides` | admin |
+| DELETE | `/api/capacity-overrides/:id` | admin |
 | POST | `/api/reservations` | none (rate-limited) |
 | GET | `/api/reservations/:id` | none |
 | POST | `/api/admin/auth/login` | none |
@@ -55,8 +91,25 @@ implementations are wired to application services.
 | GET | `/api/admin/analytics` | admin |
 | GET | `/api/admin/analytics/day/:date` | admin |
 | GET | `/api/admin/analytics/export` | admin |
+| GET | `/api/admin/analytics/heatmap` | admin |
+| GET | `/api/admin/analytics/weekly-compare` | admin |
+| GET | `/api/admin/analytics/lot-compare` | admin |
+| GET | `/api/admin/analytics/forecast` | admin |
+| GET | `/api/admin/analytics/declines` | admin |
+| GET | `/api/admin/reservations` | admin |
+| GET | `/api/admin/reservations/:id` | admin |
+| POST | `/api/admin/reservations/:id/cancel` | admin |
+| POST | `/api/admin/reservations/:id/extend` | admin |
+| GET | `/api/admin/lots/:id/current` | admin |
+| GET | `/api/admin/customers` | admin |
+| GET | `/api/admin/customers/:id` | admin |
+| POST | `/api/admin/customers/:id/flag` | admin |
+| POST | `/api/admin/customers/:id/unflag` | admin |
 
 Admin routes require a `Bearer` JWT obtained from `/api/admin/auth/login`.
+`GET /api/lots/:id/pricing-rules` is intentionally public (the customer app
+may surface it later); every other pricing/capacity/reservation/customer
+management route is admin-only.
 
 ## Prerequisites
 
@@ -127,7 +180,7 @@ docker compose up -d db_test
 # Migrate the test database once
 DATABASE_URL=postgres://parking:parking@localhost:5433/parking_test npm run migrate -w @parking/api
 
-# Run every workspace's test suite (240 tests across shared/api/customer-web/admin-web)
+# Run every workspace's test suite (509 tests across shared/api/customer-web/admin-web)
 npm test
 ```
 
@@ -139,11 +192,22 @@ before inserting) and generates:
 - **6 parking lots** across Chicago neighborhoods (Loop, River North, West
   Loop, Wicker Park, Lincoln Park, Hyde Park), with downtown lots priced and
   utilized higher than neighborhood lots.
+- **Pricing rules** on 3 of the 6 lots: Loop Premier Garage (weekday
+  7am–7pm UTC, $15/hr), River North Self Park (weekend 5pm–midnight UTC,
+  $12/hr), West Loop Lot (every day 6am–10am UTC, $10/hr). Historical
+  reservation totals for these lots are priced through the same
+  `calculateWindowCostCents` window-pricing logic the API uses at request
+  time, so seeded totals match what the rules would charge.
 - **30 days** of hourly-resolution reservation history per lot, back-filled
   from the seed run time.
 - **~55,000 reservations** (~92% completed, ~8% cancelled) plus a small
-  batch of currently-active reservations spanning "now".
-- **30 seeded customers** with realistic names/emails/phone numbers.
+  batch of currently-active reservations spanning "now". About half of
+  cancelled reservations' payments are marked `refunded`.
+- **~2.5% of payment attempts** also produce a `declined_attempts` row,
+  spread across the 30-day history, feeding the declines analytics report.
+- **30 seeded customers** with realistic names/emails/phone numbers; **2 are
+  flagged** (with a reason) to demonstrate the flagged-customer reservation
+  block and the admin unflag workflow.
 - Occupancy is weighted toward **peak hours** (8-9am, 12-1pm, 5-6pm),
   downshifted **50% on weekends**, and downtown lots target roughly 70-90%
   peak utilization vs. 40-60% for neighborhood lots.
@@ -210,10 +274,18 @@ railway up -s admin-web --ci
 # (railway.json is intentionally not committed: its dockerfilePath is
 # service-specific, so it only exists transiently during each deploy.)
 
-# One-time seed of the deployed database (run locally against Postgres's public URL,
-# since the private *.railway.internal hostname only resolves inside Railway's network)
+# Seed (or re-seed — the script truncates first) the deployed database, run
+# locally against Postgres's public URL, since the private
+# *.railway.internal hostname only resolves inside Railway's network:
 DATABASE_URL=<Postgres DATABASE_PUBLIC_URL> npm run seed -w @parking/api
 ```
+
+Redeploying after a code change is the same three `railway up` invocations
+above from the new commit; the API image runs migrations automatically on
+boot (`npm run migrate && node dist/main.js`), so a new migration (e.g. the
+phase-2 `2_phase2.cjs`) is applied as part of the deploy with no separate
+step. Re-run the seed command above afterward if the migration changed the
+schema the seed data depends on.
 
 Railway auto-injects a `PORT` environment variable into every service with a
 public domain and proxies to it; the API already reads `process.env.PORT`
