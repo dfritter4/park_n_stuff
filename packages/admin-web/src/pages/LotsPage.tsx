@@ -6,6 +6,8 @@ import { apiFetch } from '../api/client';
 import { useLots, LOTS_QUERY_KEY } from '../hooks/useLots';
 import { LotFormModal } from '../components/LotFormModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PricingRulesPanel } from '../components/PricingRulesPanel';
+import { CapacityOverridesPanel } from '../components/CapacityOverridesPanel';
 import { formatCentsAsDollars, formatPercent1 } from '../lib/format';
 
 type BulkStatus = Extract<LotStatus, 'active' | 'maintenance'>;
@@ -13,6 +15,8 @@ type BulkStatus = Extract<LotStatus, 'active' | 'maintenance'>;
 type PendingAction =
   | { type: 'delete'; lot: Lot }
   | { type: 'bulk-status'; status: BulkStatus; lotIds: string[] };
+
+type OpsPanelState = { type: 'pricing'; lot: Lot } | { type: 'capacity'; lot: Lot } | null;
 
 function occupancyPct(lot: Lot): number {
   if (lot.capacity <= 0) {
@@ -29,6 +33,7 @@ export function LotsPage() {
   const [modalState, setModalState] = useState<{ mode: 'create' } | { mode: 'edit'; lot: Lot } | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [opsPanel, setOpsPanel] = useState<OpsPanelState>(null);
 
   function invalidateLots() {
     return queryClient.invalidateQueries({ queryKey: LOTS_QUERY_KEY });
@@ -240,6 +245,12 @@ export function LotsPage() {
                 <button type="button" onClick={() => setPendingAction({ type: 'delete', lot })}>
                   Delete
                 </button>
+                <button type="button" onClick={() => setOpsPanel({ type: 'pricing', lot })}>
+                  Pricing
+                </button>
+                <button type="button" onClick={() => setOpsPanel({ type: 'capacity', lot })}>
+                  Capacity
+                </button>
               </td>
             </tr>
           ))}
@@ -303,6 +314,12 @@ export function LotsPage() {
             setPendingAction(null);
           }}
         />
+      )}
+
+      {opsPanel?.type === 'pricing' && <PricingRulesPanel lot={opsPanel.lot} onClose={() => setOpsPanel(null)} />}
+
+      {opsPanel?.type === 'capacity' && (
+        <CapacityOverridesPanel lot={opsPanel.lot} onClose={() => setOpsPanel(null)} />
       )}
     </div>
   );

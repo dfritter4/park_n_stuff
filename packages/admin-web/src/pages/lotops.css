@@ -1,0 +1,57 @@
+/* Lot pricing rules + capacity overrides panels (P10) */
+
+.modal-lg {
+  width: 640px;
+}
+
+.lotops-panel-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.lotops-panel-table th,
+.lotops-panel-table td {
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f2;
+  font-size: 0.85rem;
+}
+
+.lotops-panel-table th {
+  background: #f7f7f8;
+  color: #4a4d55;
+  font-weight: 600;
+}
+
+.lotops-panel-table tr:last-child td {
+  border-bottom: none;
+}
+
+.lotops-panel-table button {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #d6d6da;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.lotops-panel-table button:hover {
+  background: #f0f0f2;
+}
+
+.lotops-panel-empty {
+  color: #6a6d75;
+  font-size: 0.9rem;
+}
+
+.lotops-add-form {
+  border-top: 1px solid #f0f0f2;
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+
+.lotops-panel-actions {
+  justify-content: space-between;
+}
