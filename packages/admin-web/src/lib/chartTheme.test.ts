@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { heatmapColor } from './chartTheme';
+import { CHART_LINE_COLORS, CHART_PRIMARY, heatmapColor } from './chartTheme';
+
+describe('CHART_LINE_COLORS', () => {
+  it('leads with the primary brand color and has no duplicates', () => {
+    expect(CHART_LINE_COLORS[0]).toBe(CHART_PRIMARY);
+    expect(new Set(CHART_LINE_COLORS).size).toBe(CHART_LINE_COLORS.length);
+  });
+});
 
 describe('heatmapColor', () => {
   it('buckets 0% into the lightest color', () => {

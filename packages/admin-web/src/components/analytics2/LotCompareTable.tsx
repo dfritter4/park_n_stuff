@@ -20,9 +20,9 @@ export function LotCompareTable({ rows }: LotCompareTableProps) {
         {rows.map((row) => (
           <tr key={row.lotId}>
             <td>{row.name}</td>
-            <td>{formatCentsAsDollars(row.revenueCents)}</td>
-            <td>{row.reservations}</td>
-            <td>{formatPercent1(row.avgOccupancyPct)}</td>
+            <td className="num">{formatCentsAsDollars(row.revenueCents)}</td>
+            <td className="num">{row.reservations}</td>
+            <td className="num">{formatPercent1(row.avgOccupancyPct)}</td>
           </tr>
         ))}
       </tbody>

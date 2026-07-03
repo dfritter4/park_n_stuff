@@ -4,17 +4,23 @@ import { apiFetch } from '../api/client';
 
 const ANALYTICS_DAYS = 30;
 
-export function useAnalytics() {
+/** `lotId` omitted (or `undefined`) aggregates analytics across all lots. */
+export function useAnalytics(lotId?: string) {
   return useQuery({
-    queryKey: ['admin', 'analytics', ANALYTICS_DAYS],
-    queryFn: () => apiFetch<AnalyticsResponse>(`/api/admin/analytics?days=${ANALYTICS_DAYS}`),
+    queryKey: ['admin', 'analytics', ANALYTICS_DAYS, lotId ?? 'all'],
+    queryFn: () =>
+      apiFetch<AnalyticsResponse>(
+        `/api/admin/analytics?days=${ANALYTICS_DAYS}${lotId ? `&lotId=${lotId}` : ''}`,
+      ),
   });
 }
 
-export function useDayBreakdown(date: string) {
+/** `lotId` omitted (or `undefined`) aggregates the day breakdown across all lots. */
+export function useDayBreakdown(date: string, lotId?: string) {
   return useQuery({
-    queryKey: ['admin', 'analytics', 'day', date],
-    queryFn: () => apiFetch<DayBreakdownResponse>(`/api/admin/analytics/day/${date}`),
+    queryKey: ['admin', 'analytics', 'day', date, lotId ?? 'all'],
+    queryFn: () =>
+      apiFetch<DayBreakdownResponse>(`/api/admin/analytics/day/${date}${lotId ? `?lotId=${lotId}` : ''}`),
     enabled: date !== '',
   });
 }

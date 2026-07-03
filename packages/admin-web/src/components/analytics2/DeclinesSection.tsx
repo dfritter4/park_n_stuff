@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { DeclinesResponse } from '@parking/shared';
 import { toDeclinesChartData } from '../../lib/analytics2';
+import { CHART_AXIS, CHART_DANGER, CHART_GRID } from '../../lib/chartTheme';
 import { formatCentsAsDollars, formatDateTime } from '../../lib/format';
 import { MetricCard } from '../MetricCard';
 
@@ -19,11 +20,11 @@ export function DeclinesSection({ data }: DeclinesSectionProps) {
       <div className="chart-wrapper declines-chart">
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis allowDecimals={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+            <XAxis dataKey="date" stroke={CHART_AXIS} tick={{ fontSize: 12 }} />
+            <YAxis allowDecimals={false} stroke={CHART_AXIS} tick={{ fontSize: 12 }} />
             <Tooltip formatter={(value) => [value, 'Declines']} />
-            <Bar dataKey="count" name="Declines" fill="#c0341f" />
+            <Bar dataKey="count" name="Declines" fill={CHART_DANGER} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -41,7 +42,7 @@ export function DeclinesSection({ data }: DeclinesSectionProps) {
           {data.recent.map((decline, index) => (
             <tr key={`${decline.createdAt}-${index}`}>
               <td>{decline.lotName}</td>
-              <td>{formatCentsAsDollars(decline.amountCents)}</td>
+              <td className="num">{formatCentsAsDollars(decline.amountCents)}</td>
               <td>•••• {decline.cardLast4}</td>
               <td>{formatDateTime(decline.createdAt)}</td>
             </tr>

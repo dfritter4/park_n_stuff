@@ -20,9 +20,9 @@ export function DayBreakdownTable({ rows }: DayBreakdownTableProps) {
         {rows.map((row) => (
           <tr key={row.hour}>
             <td>{formatHourLabel(row.hour)}</td>
-            <td>{row.reservations}</td>
-            <td>{formatCentsAsDollars(row.revenueCents)}</td>
-            <td>{formatPercent1(row.occupancyPct)}</td>
+            <td className="num">{row.reservations}</td>
+            <td className="num">{formatCentsAsDollars(row.revenueCents)}</td>
+            <td className="num">{formatPercent1(row.occupancyPct)}</td>
           </tr>
         ))}
       </tbody>

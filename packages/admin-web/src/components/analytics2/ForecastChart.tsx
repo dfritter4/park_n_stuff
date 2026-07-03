@@ -1,8 +1,8 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { ForecastResponse } from '@parking/shared';
 import { buildForecastChartData } from '../../lib/analytics2';
-
-const LINE_COLORS = ['#4f8cff', '#ff8a4f', '#4fd18c', '#c14fff', '#ffd24f', '#4fd1c1', '#ff4f7a'];
+import { CHART_AXIS, CHART_GRID, CHART_LINE_COLORS } from '../../lib/chartTheme';
+import { formatPercent1 } from '../../lib/format';
 
 interface ForecastChartProps {
   points: ForecastResponse['points'];
@@ -16,13 +16,15 @@ export function ForecastChart({ points }: ForecastChartProps) {
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height={320}>
         <LineChart data={rows} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="hour" label={{ value: 'Hour', position: 'insideBottom', offset: -4 }} />
-          <YAxis unit="%" domain={[0, 100]} />
-          <Tooltip
-            formatter={(value) => `${Number(value).toFixed(1)}%`}
-            labelFormatter={(hour) => `Hour ${hour}`}
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+          <XAxis
+            dataKey="hour"
+            stroke={CHART_AXIS}
+            tick={{ fontSize: 12 }}
+            label={{ value: 'Hour', position: 'insideBottom', offset: -4 }}
           />
+          <YAxis unit="%" domain={[0, 100]} stroke={CHART_AXIS} tick={{ fontSize: 12 }} />
+          <Tooltip formatter={(value) => formatPercent1(Number(value))} labelFormatter={(hour) => `Hour ${hour}`} />
           <Legend />
           {dates.map((date, index) => (
             <Line
@@ -30,7 +32,7 @@ export function ForecastChart({ points }: ForecastChartProps) {
               type="monotone"
               dataKey={date}
               name={date}
-              stroke={LINE_COLORS[index % LINE_COLORS.length]}
+              stroke={CHART_LINE_COLORS[index % CHART_LINE_COLORS.length]}
               connectNulls
               dot={false}
             />

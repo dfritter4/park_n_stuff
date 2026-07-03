@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { apiFetchBlob } from '../api/client';
 import { useAnalytics, useDayBreakdown } from '../hooks/useAnalytics';
 import { useDeclines, useForecast, useHeatmap, useLotCompare, useWeeklyCompare } from '../hooks/useAnalytics2';
@@ -23,25 +23,21 @@ export function AnalyticsPage() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [selectedLotId, setSelectedLotId] = useState<string>(ALL_LOTS_VALUE);
 
-  const analyticsQuery = useAnalytics();
-  const dayBreakdownQuery = useDayBreakdown(selectedDate);
   const lotsQuery = useLots();
 
-  // Default the shared lot selector to the first lot once lots load, so the
-  // forecast chart (which requires a specific lot) has data to show right away.
-  useEffect(() => {
-    if (selectedLotId === ALL_LOTS_VALUE && lotsQuery.data && lotsQuery.data.length > 0) {
-      setSelectedLotId(lotsQuery.data[0].id);
-    }
-  }, [lotsQuery.data, selectedLotId]);
+  // A single lot selector in the page header drives every lot-scopable
+  // section. "All lots" (the default) omits lotId everywhere; the forecast
+  // section still requires a specific lot and shows its own empty-state.
+  const lotId = selectedLotId === ALL_LOTS_VALUE ? undefined : selectedLotId;
 
-  const heatmapLotId = selectedLotId === ALL_LOTS_VALUE ? undefined : selectedLotId;
-  const forecastLotId = selectedLotId === ALL_LOTS_VALUE ? undefined : selectedLotId;
+  const analyticsQuery = useAnalytics(lotId);
+  const dayBreakdownQuery = useDayBreakdown(selectedDate, lotId);
+  const heatmapQuery = useHeatmap(lotId);
+  const forecastQuery = useForecast(lotId);
 
-  const heatmapQuery = useHeatmap(heatmapLotId);
+  // Fleet-wide sections: inherently cross-lot, unaffected by the selector.
   const weeklyCompareQuery = useWeeklyCompare();
   const lotCompareQuery = useLotCompare();
-  const forecastQuery = useForecast(forecastLotId);
   const declinesQuery = useDeclines();
 
   async function handleExport() {
@@ -66,94 +62,101 @@ export function AnalyticsPage() {
 
   return (
     <div className="analytics-page">
-      <div className="analytics-page-header">
-        <h2>Analytics</h2>
+      <div className="page-header">
         <div>
-          <button type="button" onClick={handleExport} disabled={isExporting}>
+          <h2>Analytics</h2>
+          <p className="page-header-sub">{lotId ? 'Scoped to the selected lot' : 'All lots'}</p>
+        </div>
+        <div className="page-header-actions">
+          {lotsQuery.data && (
+            <LotSelector
+              id="analytics-lot-selector"
+              label="Lot"
+              lots={lotsQuery.data}
+              value={selectedLotId}
+              onChange={setSelectedLotId}
+              includeAllOption
+            />
+          )}
+          {lotsQuery.isError && <p role="alert">Could not load lots. Try again.</p>}
+          <button type="button" className="btn btn-secondary btn-sm" onClick={handleExport} disabled={isExporting}>
             {isExporting ? 'Exporting…' : 'Export CSV'}
           </button>
           {exportError && <p role="alert">{exportError}</p>}
         </div>
       </div>
 
-      <section className="analytics-section">
-        <h3>Hourly occupancy (last 7 days)</h3>
-        {analyticsQuery.isLoading && <p>Loading…</p>}
-        {analyticsQuery.isError && <p role="alert">Could not load analytics. Try again.</p>}
-        {analyticsQuery.data && <OccupancyLineChart hourlyOccupancy={analyticsQuery.data.hourlyOccupancy} />}
-      </section>
+      <div className="analytics-grid">
+        <section className="card analytics-card span-12">
+          <h3>Hourly occupancy (last 7 days)</h3>
+          {analyticsQuery.isLoading && <p>Loading…</p>}
+          {analyticsQuery.isError && <p role="alert">Could not load analytics. Try again.</p>}
+          {analyticsQuery.data && <OccupancyLineChart hourlyOccupancy={analyticsQuery.data.hourlyOccupancy} />}
+        </section>
 
-      <section className="analytics-section">
-        <h3>Daily revenue (last 30 days)</h3>
-        {analyticsQuery.isLoading && <p>Loading…</p>}
-        {analyticsQuery.isError && <p role="alert">Could not load analytics. Try again.</p>}
-        {analyticsQuery.data && <RevenueBarChart dailyRevenue={analyticsQuery.data.dailyRevenue} />}
-      </section>
+        <section className="card analytics-card span-7">
+          <h3>Daily revenue (last 30 days)</h3>
+          {analyticsQuery.isLoading && <p>Loading…</p>}
+          {analyticsQuery.isError && <p role="alert">Could not load analytics. Try again.</p>}
+          {analyticsQuery.data && <RevenueBarChart dailyRevenue={analyticsQuery.data.dailyRevenue} />}
+        </section>
 
-      <section className="analytics-section">
-        <h3>Day breakdown</h3>
-        <label htmlFor="analytics-day-picker">Date</label>
-        <input
-          id="analytics-day-picker"
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
-        {dayBreakdownQuery.isLoading && <p>Loading…</p>}
-        {dayBreakdownQuery.isError && <p role="alert">Could not load the day breakdown. Try again.</p>}
-        {dayBreakdownQuery.data && <DayBreakdownTable rows={dayBreakdownQuery.data.rows} />}
-      </section>
+        <section className="card analytics-card span-5">
+          <h3>
+            This week vs last week revenue <span className="analytics-scope-tag">All lots</span>
+          </h3>
+          {weeklyCompareQuery.isLoading && <p>Loading…</p>}
+          {weeklyCompareQuery.isError && <p role="alert">Could not load the weekly comparison. Try again.</p>}
+          {weeklyCompareQuery.data && <WeeklyCompareChart data={weeklyCompareQuery.data} />}
+        </section>
 
-      <section className="analytics-section">
-        <h3>Lot</h3>
-        {lotsQuery.data && (
-          <LotSelector
-            id="analytics2-lot-selector"
-            label="Lot"
-            lots={lotsQuery.data}
-            value={selectedLotId}
-            onChange={setSelectedLotId}
-            includeAllOption
+        <section className="card analytics-card span-12">
+          <h3>Occupancy heatmap (last 30 days{lotId ? '' : ', all lots'})</h3>
+          {heatmapQuery.isLoading && <p>Loading…</p>}
+          {heatmapQuery.isError && <p role="alert">Could not load the heatmap. Try again.</p>}
+          {heatmapQuery.data && <OccupancyHeatmap cells={heatmapQuery.data.cells} />}
+        </section>
+
+        <section className="card analytics-card span-6">
+          <h3>Day breakdown</h3>
+          <label htmlFor="analytics-day-picker">Date</label>
+          <input
+            id="analytics-day-picker"
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
           />
-        )}
-        {lotsQuery.isError && <p role="alert">Could not load lots. Try again.</p>}
-      </section>
+          {dayBreakdownQuery.isLoading && <p>Loading…</p>}
+          {dayBreakdownQuery.isError && <p role="alert">Could not load the day breakdown. Try again.</p>}
+          {dayBreakdownQuery.data && <DayBreakdownTable rows={dayBreakdownQuery.data.rows} />}
+        </section>
 
-      <section className="analytics-section">
-        <h3>Occupancy heatmap (last 30 days{heatmapLotId ? '' : ', all lots'})</h3>
-        {heatmapQuery.isLoading && <p>Loading…</p>}
-        {heatmapQuery.isError && <p role="alert">Could not load the heatmap. Try again.</p>}
-        {heatmapQuery.data && <OccupancyHeatmap cells={heatmapQuery.data.cells} />}
-      </section>
+        <section className="card analytics-card span-6">
+          <h3>
+            Lot comparison (last 30 days) <span className="analytics-scope-tag">All lots</span>
+          </h3>
+          {lotCompareQuery.isLoading && <p>Loading…</p>}
+          {lotCompareQuery.isError && <p role="alert">Could not load the lot comparison. Try again.</p>}
+          {lotCompareQuery.data && <LotCompareTable rows={lotCompareQuery.data.rows} />}
+        </section>
 
-      <section className="analytics-section">
-        <h3>This week vs last week revenue</h3>
-        {weeklyCompareQuery.isLoading && <p>Loading…</p>}
-        {weeklyCompareQuery.isError && <p role="alert">Could not load the weekly comparison. Try again.</p>}
-        {weeklyCompareQuery.data && <WeeklyCompareChart data={weeklyCompareQuery.data} />}
-      </section>
+        <section className="card analytics-card span-7">
+          <h3>Occupancy forecast (next 7 days)</h3>
+          {!lotId && <p>Select a specific lot above to view its forecast.</p>}
+          {lotId && forecastQuery.isLoading && <p>Loading…</p>}
+          {lotId && forecastQuery.isError && <p role="alert">Could not load the forecast. Try again.</p>}
+          {lotId && forecastQuery.data && <ForecastChart points={forecastQuery.data.points} />}
+        </section>
 
-      <section className="analytics-section">
-        <h3>Lot comparison (last 30 days)</h3>
-        {lotCompareQuery.isLoading && <p>Loading…</p>}
-        {lotCompareQuery.isError && <p role="alert">Could not load the lot comparison. Try again.</p>}
-        {lotCompareQuery.data && <LotCompareTable rows={lotCompareQuery.data.rows} />}
-      </section>
-
-      <section className="analytics-section">
-        <h3>Occupancy forecast (next 7 days)</h3>
-        {!forecastLotId && <p>Select a specific lot above to view its forecast.</p>}
-        {forecastLotId && forecastQuery.isLoading && <p>Loading…</p>}
-        {forecastLotId && forecastQuery.isError && <p role="alert">Could not load the forecast. Try again.</p>}
-        {forecastLotId && forecastQuery.data && <ForecastChart points={forecastQuery.data.points} />}
-      </section>
-
-      <section className="analytics-section">
-        <h3>Declined payments (last 30 days)</h3>
-        {declinesQuery.isLoading && <p>Loading…</p>}
-        {declinesQuery.isError && <p role="alert">Could not load declines. Try again.</p>}
-        {declinesQuery.data && <DeclinesSection data={declinesQuery.data} />}
-      </section>
+        <section className="card analytics-card span-5">
+          <h3>
+            Declined payments (last 30 days) <span className="analytics-scope-tag">All lots</span>
+          </h3>
+          {declinesQuery.isLoading && <p>Loading…</p>}
+          {declinesQuery.isError && <p role="alert">Could not load declines. Try again.</p>}
+          {declinesQuery.data && <DeclinesSection data={declinesQuery.data} />}
+        </section>
+      </div>
     </div>
   );
 }
