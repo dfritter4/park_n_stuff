@@ -15,6 +15,12 @@ export function Layout() {
           <NavLink to="/lots" className={({ isActive }) => (isActive ? 'active' : '')}>
             Lots
           </NavLink>
+          <NavLink to="/reservations" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Reservations
+          </NavLink>
+          <NavLink to="/customers" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Customers
+          </NavLink>
           <NavLink to="/analytics" className={({ isActive }) => (isActive ? 'active' : '')}>
             Analytics
           </NavLink>

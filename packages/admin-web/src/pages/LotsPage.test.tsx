@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import type { Lot } from '@parking/shared';
 import { LotsPage } from './LotsPage';
 
@@ -31,7 +32,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 function renderLotsPage(queryClient: QueryClient) {
   return render(
     <QueryClientProvider client={queryClient}>
-      <LotsPage />
+      <MemoryRouter>
+        <LotsPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }

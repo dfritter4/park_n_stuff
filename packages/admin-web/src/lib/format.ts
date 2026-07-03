@@ -24,6 +24,21 @@ export function formatTimeRange(startISO: string, endISO: string): string {
   return `${formatter.format(new Date(startISO))} – ${formatter.format(new Date(endISO))}`;
 }
 
+/** Formats an ISO timestamp as a local date + time string for detail views. */
+export function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+}
+
+/** Formats a Date as a local "YYYY-MM-DDTHH:mm" string for `datetime-local` input values/defaults. */
+export function toDatetimeLocalInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;

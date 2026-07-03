@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHourLabel, todayDateString } from './format';
+import { formatHourLabel, todayDateString, toDatetimeLocalInput } from './format';
 
 describe('formatHourLabel', () => {
   it('zero-pads single-digit hours', () => {
@@ -30,5 +30,15 @@ describe('todayDateString', () => {
 
   it('formats the last day of the year correctly', () => {
     expect(todayDateString(new Date(2026, 11, 31))).toBe('2026-12-31');
+  });
+});
+
+describe('toDatetimeLocalInput', () => {
+  it('formats a local date/time as "YYYY-MM-DDTHH:mm"', () => {
+    expect(toDatetimeLocalInput(new Date(2026, 0, 5, 9, 5))).toBe('2026-01-05T09:05');
+  });
+
+  it('zero-pads single-digit hours and minutes', () => {
+    expect(toDatetimeLocalInput(new Date(2026, 8, 3, 0, 0))).toBe('2026-09-03T00:00');
   });
 });

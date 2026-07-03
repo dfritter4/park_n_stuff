@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import type { CreateLotRequest, Lot, LotStatus, UpdateLotRequest } from '@parking/shared';
 import { apiFetch } from '../api/client';
 import { useLots, LOTS_QUERY_KEY } from '../hooks/useLots';
@@ -232,6 +233,7 @@ export function LotsPage() {
               </td>
               <td>{formatPercent1(occupancyPct(lot))}</td>
               <td className="lots-table-row-actions">
+                <Link to={`/reservations?lotId=${lot.id}&activeNow=true`}>View current</Link>
                 <button type="button" onClick={() => setModalState({ mode: 'edit', lot })}>
                   Edit
                 </button>
