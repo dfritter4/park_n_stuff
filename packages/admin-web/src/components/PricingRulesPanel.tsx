@@ -4,6 +4,7 @@ import type { CreatePricingRuleRequest, DayType, Lot, PricingRule } from '@parki
 import { apiFetch } from '../api/client';
 import { PRICING_RULES_QUERY_KEY, usePricingRules } from '../hooks/useLotOps';
 import { ConfirmDialog } from './ConfirmDialog';
+import { Skeleton } from './Skeleton';
 import { dollarsToCents } from '../lib/lots';
 import { formatCentsAsDollars, formatHourLabel } from '../lib/format';
 import { formatDayType, formatHourRange } from '../lib/lotOps';
@@ -105,7 +106,11 @@ export function PricingRulesPanel({ lot, onClose }: PricingRulesPanelProps) {
       <div className="modal modal-lg" role="dialog" aria-modal="true" aria-label={`Pricing rules for ${lot.name}`}>
         <h2>Pricing rules — {lot.name}</h2>
 
-        {rulesQuery.isLoading && <p>Loading pricing rules…</p>}
+        {rulesQuery.isLoading && (
+          <div role="status" aria-label="Loading" className="lotops-panel-loading">
+            <Skeleton height="2.5rem" count={3} />
+          </div>
+        )}
         {rulesQuery.isError && <p role="alert">Could not load pricing rules.</p>}
 
         {!rulesQuery.isLoading && !rulesQuery.isError && rules.length === 0 && (
@@ -115,12 +120,12 @@ export function PricingRulesPanel({ lot, onClose }: PricingRulesPanelProps) {
         )}
 
         {!rulesQuery.isLoading && !rulesQuery.isError && rules.length > 0 && (
-          <table className="lotops-panel-table">
+          <table className="data-table lotops-panel-table">
             <thead>
               <tr>
                 <th>Day type</th>
                 <th>Hours (UTC)</th>
-                <th>Rate</th>
+                <th className="num">Rate</th>
                 <th></th>
               </tr>
             </thead>
@@ -129,9 +134,9 @@ export function PricingRulesPanel({ lot, onClose }: PricingRulesPanelProps) {
                 <tr key={rule.id}>
                   <td>{formatDayType(rule.dayType)}</td>
                   <td>{formatHourRange(rule.startHour, rule.endHour)}</td>
-                  <td>{formatCentsAsDollars(rule.hourlyRateCents)}/hr</td>
+                  <td className="num">{formatCentsAsDollars(rule.hourlyRateCents)}/hr</td>
                   <td>
-                    <button type="button" onClick={() => setPendingDelete(rule)}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPendingDelete(rule)}>
                       Delete
                     </button>
                   </td>
@@ -143,6 +148,7 @@ export function PricingRulesPanel({ lot, onClose }: PricingRulesPanelProps) {
 
         {isAdding ? (
           <form onSubmit={handleAddSubmit} noValidate className="lotops-add-form">
+            <p className="lotops-add-form-title">New pricing rule</p>
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="rule-day-type">Day type</label>
@@ -196,20 +202,20 @@ export function PricingRulesPanel({ lot, onClose }: PricingRulesPanelProps) {
             )}
 
             <div className="modal-actions">
-              <button type="button" onClick={closeAddForm} disabled={createMutation.isPending}>
+              <button type="button" className="btn btn-secondary" onClick={closeAddForm} disabled={createMutation.isPending}>
                 Cancel
               </button>
-              <button type="submit" disabled={createMutation.isPending}>
+              <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Adding…' : 'Add rule'}
               </button>
             </div>
           </form>
         ) : (
           <div className="modal-actions lotops-panel-actions">
-            <button type="button" onClick={onClose}>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
-            <button type="button" onClick={openAddForm}>
+            <button type="button" className="btn btn-primary" onClick={openAddForm}>
               Add rule
             </button>
           </div>

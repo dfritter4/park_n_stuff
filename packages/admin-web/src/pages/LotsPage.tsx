@@ -8,7 +8,9 @@ import { LotFormModal } from '../components/LotFormModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PricingRulesPanel } from '../components/PricingRulesPanel';
 import { CapacityOverridesPanel } from '../components/CapacityOverridesPanel';
+import { Skeleton } from '../components/Skeleton';
 import { formatCentsAsDollars, formatPercent1 } from '../lib/format';
+import './lotops.css';
 
 type BulkStatus = Extract<LotStatus, 'active' | 'maintenance'>;
 
@@ -158,7 +160,16 @@ export function LotsPage() {
   }
 
   if (lotsQuery.isLoading) {
-    return <p>Loading lots…</p>;
+    return (
+      <div className="lots-page">
+        <div className="page-header">
+          <h2>Lots</h2>
+        </div>
+        <div role="status" aria-label="Loading" className="lots-loading-row">
+          <Skeleton height="2.75rem" count={5} />
+        </div>
+      </div>
+    );
   }
 
   if (lotsQuery.isError) {
@@ -167,13 +178,14 @@ export function LotsPage() {
 
   return (
     <div className="lots-page">
-      <div className="lots-page-header">
+      <div className="page-header lots-page-header">
         <h2>Lots</h2>
         <div className="lots-page-actions">
           {selectedIds.size > 0 && (
             <>
               <button
                 type="button"
+                className="btn btn-secondary"
                 disabled={isMutating}
                 onClick={() =>
                   setPendingAction({ type: 'bulk-status', status: 'maintenance', lotIds: Array.from(selectedIds) })
@@ -183,6 +195,7 @@ export function LotsPage() {
               </button>
               <button
                 type="button"
+                className="btn btn-secondary"
                 disabled={isMutating}
                 onClick={() =>
                   setPendingAction({ type: 'bulk-status', status: 'active', lotIds: Array.from(selectedIds) })
@@ -192,72 +205,80 @@ export function LotsPage() {
               </button>
             </>
           )}
-          <button type="button" disabled={isMutating} onClick={() => setModalState({ mode: 'create' })}>
+          <button type="button" className="btn btn-primary" disabled={isMutating} onClick={() => setModalState({ mode: 'create' })}>
             Add Lot
           </button>
         </div>
       </div>
 
-      <table className="lots-table">
-        <thead>
-          <tr>
-            <th>
-              <input
-                type="checkbox"
-                aria-label="Select all lots"
-                checked={lots.length > 0 && selectedIds.size === lots.length}
-                onChange={toggleSelectAll}
-              />
-            </th>
-            <th>Name</th>
-            <th>Neighborhood</th>
-            <th>Capacity</th>
-            <th>Rate</th>
-            <th>Status</th>
-            <th>Occupancy</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lots.map((lot) => (
-            <tr key={lot.id}>
-              <td>
+      {lots.length === 0 ? (
+        <p className="lots-table-empty">No lots yet. Add your first lot to get started.</p>
+      ) : (
+        <table className="data-table lots-table">
+          <thead>
+            <tr>
+              <th>
                 <input
                   type="checkbox"
-                  aria-label={`Select ${lot.name}`}
-                  checked={selectedIds.has(lot.id)}
-                  onChange={() => toggleSelected(lot.id)}
+                  aria-label="Select all lots"
+                  checked={lots.length > 0 && selectedIds.size === lots.length}
+                  onChange={toggleSelectAll}
                 />
-              </td>
-              <td>{lot.name}</td>
-              <td>{lot.neighborhood}</td>
-              <td>{lot.capacity}</td>
-              <td>{formatCentsAsDollars(lot.hourlyRateCents)}</td>
-              <td>
-                <span className={`status-badge status-badge-${lot.status}`}>{lot.status}</span>
-              </td>
-              <td>{formatPercent1(occupancyPct(lot))}</td>
-              <td className="lots-table-row-actions">
-                <Link to={`/reservations?lotId=${lot.id}&activeNow=true`}>View current</Link>
-                <button type="button" onClick={() => setModalState({ mode: 'edit', lot })}>
-                  Edit
-                </button>
-                <button type="button" onClick={() => setPendingAction({ type: 'delete', lot })}>
-                  Delete
-                </button>
-                <button type="button" onClick={() => setOpsPanel({ type: 'pricing', lot })}>
-                  Pricing
-                </button>
-                <button type="button" onClick={() => setOpsPanel({ type: 'capacity', lot })}>
-                  Capacity
-                </button>
-              </td>
+              </th>
+              <th>Name</th>
+              <th>Neighborhood</th>
+              <th className="num">Capacity</th>
+              <th className="num">Rate</th>
+              <th>Status</th>
+              <th className="num">Occupancy</th>
+              <th>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {lots.length === 0 && <p className="lots-table-empty">No lots yet.</p>}
+          </thead>
+          <tbody>
+            {lots.map((lot) => (
+              <tr key={lot.id}>
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${lot.name}`}
+                    checked={selectedIds.has(lot.id)}
+                    onChange={() => toggleSelected(lot.id)}
+                  />
+                </td>
+                <td>{lot.name}</td>
+                <td>{lot.neighborhood}</td>
+                <td className="num">{lot.capacity}</td>
+                <td className="num">{formatCentsAsDollars(lot.hourlyRateCents)}</td>
+                <td>
+                  <span className={`status-badge status-badge-${lot.status}`}>{lot.status}</span>
+                </td>
+                <td className="num">{formatPercent1(occupancyPct(lot))}</td>
+                <td className="lots-table-row-actions">
+                  <Link className="btn btn-ghost btn-sm" to={`/reservations?lotId=${lot.id}&activeNow=true`}>
+                    View current
+                  </Link>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setModalState({ mode: 'edit', lot })}>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm btn-ghost-danger"
+                    onClick={() => setPendingAction({ type: 'delete', lot })}
+                  >
+                    Delete
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpsPanel({ type: 'pricing', lot })}>
+                    Pricing
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpsPanel({ type: 'capacity', lot })}>
+                    Capacity
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       {modalState?.mode === 'create' && (
         <LotFormModal

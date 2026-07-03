@@ -5,6 +5,7 @@ import { apiFetch } from '../api/client';
 import { CAPACITY_OVERRIDES_QUERY_KEY, useCapacityOverrides } from '../hooks/useLotOps';
 import { LOTS_QUERY_KEY } from '../hooks/useLots';
 import { ConfirmDialog } from './ConfirmDialog';
+import { Skeleton } from './Skeleton';
 import { toDatetimeLocalInput } from '../lib/format';
 import { formatOverrideWindow } from '../lib/lotOps';
 import '../pages/lotops.css';
@@ -141,7 +142,11 @@ export function CapacityOverridesPanel({ lot, onClose }: CapacityOverridesPanelP
       <div className="modal modal-lg" role="dialog" aria-modal="true" aria-label={`Capacity overrides for ${lot.name}`}>
         <h2>Capacity overrides — {lot.name}</h2>
 
-        {overridesQuery.isLoading && <p>Loading capacity overrides…</p>}
+        {overridesQuery.isLoading && (
+          <div role="status" aria-label="Loading" className="lotops-panel-loading">
+            <Skeleton height="2.5rem" count={3} />
+          </div>
+        )}
         {overridesQuery.isError && <p role="alert">Could not load capacity overrides.</p>}
 
         {!overridesQuery.isLoading && !overridesQuery.isError && overrides.length === 0 && (
@@ -149,10 +154,10 @@ export function CapacityOverridesPanel({ lot, onClose }: CapacityOverridesPanelP
         )}
 
         {!overridesQuery.isLoading && !overridesQuery.isError && overrides.length > 0 && (
-          <table className="lotops-panel-table">
+          <table className="data-table lotops-panel-table">
             <thead>
               <tr>
-                <th>Spaces closed</th>
+                <th className="num">Spaces closed</th>
                 <th>Reason</th>
                 <th>Window</th>
                 <th></th>
@@ -161,11 +166,11 @@ export function CapacityOverridesPanel({ lot, onClose }: CapacityOverridesPanelP
             <tbody>
               {overrides.map((override) => (
                 <tr key={override.id}>
-                  <td>{override.spacesClosed}</td>
+                  <td className="num">{override.spacesClosed}</td>
                   <td>{override.reason ?? '—'}</td>
                   <td>{formatOverrideWindow(override.startsAt, override.endsAt)}</td>
                   <td>
-                    <button type="button" onClick={() => setPendingDelete(override)}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPendingDelete(override)}>
                       Delete
                     </button>
                   </td>
@@ -177,6 +182,7 @@ export function CapacityOverridesPanel({ lot, onClose }: CapacityOverridesPanelP
 
         {isAdding ? (
           <form onSubmit={handleAddSubmit} noValidate className="lotops-add-form">
+            <p className="lotops-add-form-title">New capacity override</p>
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="override-spaces">Spaces closed</label>
@@ -223,20 +229,20 @@ export function CapacityOverridesPanel({ lot, onClose }: CapacityOverridesPanelP
             )}
 
             <div className="modal-actions">
-              <button type="button" onClick={closeAddForm} disabled={createMutation.isPending}>
+              <button type="button" className="btn btn-secondary" onClick={closeAddForm} disabled={createMutation.isPending}>
                 Cancel
               </button>
-              <button type="submit" disabled={createMutation.isPending}>
+              <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Adding…' : 'Add override'}
               </button>
             </div>
           </form>
         ) : (
           <div className="modal-actions lotops-panel-actions">
-            <button type="button" onClick={onClose}>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
-            <button type="button" onClick={openAddForm}>
+            <button type="button" className="btn btn-primary" onClick={openAddForm}>
               Add override
             </button>
           </div>

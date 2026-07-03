@@ -1,57 +1,137 @@
-/* Lot pricing rules + capacity overrides panels (P10) */
+/* Lots page + ops panels (pricing rules / capacity overrides) — U5.
+   Built entirely on the U2 design tokens and primitives from index.css
+   (.btn*, .card, .data-table, .num, .status-badge, .modal, .form-field).
+   This file only adds page-specific layout and a couple of composed-button
+   overrides where the frozen index.css aliases (scoped to raw `button`
+   selectors) would otherwise out-specificity the `.btn-ghost`/`.btn-primary`
+   classes applied here. */
+
+/* ------------------------------------------------------------------ */
+/* Lots table row actions                                             */
+/* ------------------------------------------------------------------ */
+
+.lots-table-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.lots-table-row-actions .btn-ghost,
+.lots-table-row-actions a.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-primary);
+  padding: 0.3rem 0.55rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.lots-table-row-actions .btn-ghost:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+
+.lots-table-row-actions .btn-ghost.btn-ghost-danger {
+  color: var(--color-danger);
+}
+
+.lots-table-row-actions .btn-ghost.btn-ghost-danger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
+
+.lots-table-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.lots-loading-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.lots-page-actions .btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.lots-page-actions .btn-secondary:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+/* ------------------------------------------------------------------ */
+/* Ops panel modals (pricing rules / capacity overrides)              */
+/* ------------------------------------------------------------------ */
 
 .modal-lg {
   width: 640px;
 }
 
-.lotops-panel-table {
-  width: 100%;
-  border-collapse: collapse;
+.lotops-panel-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.lotops-panel-table th,
-.lotops-panel-table td {
-  padding: 0.5rem 0.6rem;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f2;
-  font-size: 0.85rem;
-}
-
-.lotops-panel-table th {
-  background: #f7f7f8;
-  color: #4a4d55;
+.lotops-panel-table .btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-danger);
+  padding: 0.3rem 0.6rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.lotops-panel-table tr:last-child td {
-  border-bottom: none;
-}
-
-.lotops-panel-table button {
-  padding: 0.3rem 0.6rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.lotops-panel-table button:hover {
-  background: #f0f0f2;
+.lotops-panel-table .btn-ghost:hover:not(:disabled) {
+  background: var(--color-danger-soft);
 }
 
 .lotops-panel-empty {
-  color: #6a6d75;
-  font-size: 0.9rem;
+  margin: 0 0 1rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
 }
 
 .lotops-add-form {
-  border-top: 1px solid #f0f0f2;
-  padding-top: 1rem;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
+  padding: 1rem 1rem 0.25rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.lotops-add-form-title {
+  margin: 0 0 0.75rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
 }
 
 .lotops-panel-actions {
   justify-content: space-between;
+}
+
+.lotops-panel-actions .btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.lotops-panel-actions .btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }

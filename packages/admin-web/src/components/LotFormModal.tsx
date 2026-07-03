@@ -216,10 +216,10 @@ export function LotFormModal(props: LotFormModalProps) {
           )}
 
           <div className="modal-actions">
-            <button type="button" onClick={onClose} disabled={isSubmitting}>
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </button>
-            <button type="submit" disabled={isSubmitting}>
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               {submitLabel}
             </button>
           </div>

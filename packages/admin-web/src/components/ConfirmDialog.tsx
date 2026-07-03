@@ -28,10 +28,10 @@ export function ConfirmDialog({
           </p>
         )}
         <div className="modal-actions">
-          <button type="button" onClick={onCancel} disabled={isConfirming}>
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={isConfirming}>
             Cancel
           </button>
-          <button type="button" className="danger-button" onClick={onConfirm} disabled={isConfirming}>
+          <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={isConfirming}>
             {confirmLabel}
           </button>
         </div>
