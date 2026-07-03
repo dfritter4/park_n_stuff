@@ -2,26 +2,8 @@ import type { DeclinesResponse, ForecastResponse, HeatmapResponse, WeeklyCompare
 
 const HOURS_PER_DAY = 24;
 
-/**
- * Occupancy-percentage color scale for the heatmap grid, lightest at low
- * occupancy and darkest as lots approach capacity. Buckets are inclusive of
- * their upper threshold so a cell exactly on a boundary (e.g. 20%) falls into
- * the lower/lighter bucket rather than the next one up.
- */
-const HEATMAP_BUCKETS: Array<{ maxPct: number; color: string }> = [
-  { maxPct: 20, color: '#eef2ff' },
-  { maxPct: 40, color: '#c7d7fe' },
-  { maxPct: 60, color: '#8ea3fb' },
-  { maxPct: 80, color: '#5570f3' },
-  { maxPct: 100, color: '#2f3fb8' },
-];
-
-/** Maps an occupancy percentage (0-100, clamped) to a heatmap cell color. */
-export function heatmapColor(occupancyPct: number): string {
-  const clamped = Math.min(100, Math.max(0, occupancyPct));
-  const bucket = HEATMAP_BUCKETS.find((b) => clamped <= b.maxPct);
-  return (bucket ?? HEATMAP_BUCKETS[HEATMAP_BUCKETS.length - 1]).color;
-}
+/** @deprecated moved to `lib/chartTheme`; re-exported here for backward compatibility. */
+export { heatmapColor } from './chartTheme';
 
 /** Formats a "YYYY-MM-DD" date string as a short UTC weekday name (e.g. "Mon"). */
 export function formatWeekdayShort(dateStr: string): string {

@@ -1,3 +1,49 @@
+:root {
+  /* canvas + surfaces */
+  --color-bg: #f4f5f8;
+  --color-surface: #ffffff;
+  --color-border: #e5e7ec;
+  --color-border-strong: #d3d6de;
+
+  /* text */
+  --color-text: #191b20;
+  --color-text-secondary: #565b66;
+  --color-text-muted: #8a8f9b;
+
+  /* brand */
+  --color-primary: #4353d9;
+  --color-primary-hover: #3543ba;
+  --color-primary-soft: #eceefb;
+
+  /* status */
+  --color-success: #187a43;  --color-success-soft: #e2f5ea;
+  --color-warning: #a05f10;  --color-warning-soft: #fbf1df;
+  --color-danger:  #bc3222;  --color-danger-soft:  #fbe9e6;
+  --color-info:    #2a5bb8;  --color-info-soft:    #e6eefc;
+  --color-refund:  #6431c9;  --color-refund-soft:  #f0eafd;
+
+  /* sidebar */
+  --color-sidebar-bg: #14161d;
+  --color-sidebar-text: #b8bcc7;
+  --color-sidebar-hover: #1e212b;
+  --color-sidebar-active: #262a37;
+
+  /* type scale */
+  --text-xs: 0.72rem;  --text-sm: 0.82rem;  --text-md: 0.9rem;
+  --text-lg: 1.05rem;  --text-xl: 1.35rem;  --text-2xl: 1.7rem;
+
+  /* shape + elevation */
+  --radius-sm: 6px;  --radius-md: 10px;  --radius-full: 999px;
+  --shadow-sm: 0 1px 2px rgba(20, 22, 29, 0.05);
+  --shadow-md: 0 4px 16px rgba(20, 22, 29, 0.08);
+  --shadow-modal: 0 12px 40px rgba(20, 22, 29, 0.18);
+
+  /* focus */
+  --focus-ring: 0 0 0 3px rgba(67, 83, 217, 0.35);
+}
+
+/* Base */
+
 * {
   box-sizing: border-box;
 }
@@ -16,11 +62,349 @@ body {
     'Segoe UI',
     Roboto,
     sans-serif;
-  color: #1a1a1a;
-  background: #f7f7f8;
+  color: var(--color-text);
+  background: var(--color-bg);
 }
 
-/* Layout */
+h1,
+h2,
+h3 {
+  font-family: inherit;
+  color: var(--color-text);
+}
+
+a {
+  color: var(--color-primary);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.coming-soon {
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Shared primitives                                                      */
+/* ---------------------------------------------------------------------- */
+
+/* Buttons: `.btn*` classes are the canonical API; the raw selectors below
+   alias existing page markup to the same look so pages don't need to change
+   their JSX to pick up the new styling (later tasks may adopt the classes
+   directly as they touch each page). */
+
+.btn,
+.login-card button,
+.lots-page-actions button,
+.analytics-page-header button,
+.lots-table-row-actions button,
+.modal-actions button,
+.reservations-filter-bar button[type='submit'],
+.reservation-detail-actions button,
+.pagination button,
+.logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.btn-secondary,
+.lots-table-row-actions button,
+.modal-actions button,
+.reservation-detail-actions button,
+.pagination button,
+.logout-button {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.btn-secondary:hover:not(:disabled),
+.lots-table-row-actions button:hover:not(:disabled),
+.modal-actions button:hover:not(:disabled),
+.reservation-detail-actions button:hover:not(:disabled),
+.pagination button:hover:not(:disabled),
+.logout-button:hover:not(:disabled) {
+  background: var(--color-bg);
+  border-color: var(--color-border-strong);
+}
+
+.btn-primary,
+.login-card button,
+.lots-page-actions button,
+.analytics-page-header button,
+.reservations-filter-bar button[type='submit'],
+.modal-actions button[type='submit'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled),
+.login-card button:hover:not(:disabled),
+.lots-page-actions button:hover:not(:disabled),
+.analytics-page-header button:hover:not(:disabled),
+.reservations-filter-bar button[type='submit']:hover:not(:disabled),
+.modal-actions button[type='submit']:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.btn-danger,
+.danger-button {
+  background: var(--color-danger) !important;
+  border-color: var(--color-danger) !important;
+  color: #ffffff !important;
+}
+
+.btn-danger:hover:not(:disabled),
+.danger-button:hover:not(:disabled) {
+  background: #9c2a1d !important;
+  border-color: #9c2a1d !important;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-primary);
+  padding: 0.4rem 0.6rem;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+
+.btn-sm,
+.lots-table-row-actions button,
+.pagination button,
+.logout-button {
+  padding: 0.35rem 0.8rem;
+  font-size: var(--text-sm);
+}
+
+.btn:disabled,
+.login-card button:disabled,
+.lots-page-actions button:disabled,
+.analytics-page-header button:disabled,
+.modal-actions button:disabled,
+.pagination button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Cards */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+}
+
+.card-title {
+  margin: 0 0 0.4rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+/* Tables: `.data-table` is the canonical ruleset; the four legacy table
+   class names are aliased to it via comma selectors so existing page
+   markup keeps its current look without changes. */
+
+.data-table,
+.lots-table,
+.day-breakdown-table,
+.reservations-table,
+.lot-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.data-table th,
+.data-table td,
+.lots-table th,
+.lots-table td,
+.day-breakdown-table th,
+.day-breakdown-table td,
+.reservations-table th,
+.reservations-table td,
+.lot-compare-table th,
+.lot-compare-table td {
+  padding: 0.65rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-md);
+}
+
+.data-table th,
+.lots-table th,
+.day-breakdown-table th,
+.reservations-table th,
+.lot-compare-table th {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.data-table tr:last-child td,
+.lots-table tr:last-child td,
+.day-breakdown-table tr:last-child td,
+.reservations-table tr:last-child td,
+.lot-compare-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover,
+.lots-table tbody tr:hover,
+.day-breakdown-table tbody tr:hover,
+.lot-compare-table tbody tr:hover {
+  background: #f8f9fd;
+}
+
+.data-table .num,
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Badges */
+
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-badge-active,
+.status-badge-succeeded {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.status-badge-maintenance {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.status-badge-completed {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.status-badge-cancelled,
+.status-badge-declined,
+.status-badge-flagged {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.status-badge-flagged {
+  margin-left: 0.5rem;
+}
+
+.status-badge-refunded {
+  background: var(--color-refund-soft);
+  color: var(--color-refund);
+}
+
+/* Page header */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.page-header-sub {
+  margin: 0.2rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Skeletons */
+
+.skeleton {
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-bg) 37%, var(--color-border) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--color-border);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* App shell                                                              */
+/* ---------------------------------------------------------------------- */
 
 .app-layout {
   display: flex;
@@ -30,42 +414,65 @@ body {
 .sidebar {
   width: 220px;
   flex-shrink: 0;
-  background: #1a1d23;
-  color: #ffffff;
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-brand {
-  padding: 1.25rem 1.5rem;
-  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.1rem 1.25rem;
+  font-size: var(--text-lg);
   font-weight: 700;
-  border-bottom: 1px solid #2c2f36;
+  color: #ffffff;
+  border-bottom: 1px solid var(--color-sidebar-hover);
+}
+
+.sidebar-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 800;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  padding: 0.75rem 0;
+  gap: 0.15rem;
+  padding: 0.75rem;
 }
 
 .sidebar-nav a {
-  padding: 0.75rem 1.5rem;
-  color: #c4c7cf;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-sidebar-text);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
 }
 
 .sidebar-nav a:hover {
-  background: #262a32;
+  background: var(--color-sidebar-hover);
   color: #ffffff;
 }
 
 .sidebar-nav a.active {
-  background: #2f3542;
+  background: var(--color-sidebar-active);
   color: #ffffff;
   font-weight: 600;
-  border-left: 3px solid #4f8cff;
 }
 
 .app-main {
@@ -80,27 +487,16 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e2e6;
+  height: 56px;
+  flex-shrink: 0;
+  padding: 0 1.5rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .topbar-email {
-  font-size: 0.9rem;
-  color: #4a4d55;
-}
-
-.logout-button {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.logout-button:hover {
-  background: #f0f0f2;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .app-content {
@@ -109,11 +505,9 @@ body {
   overflow-y: auto;
 }
 
-.coming-soon {
-  color: #6a6d75;
-}
-
-/* Login page */
+/* ---------------------------------------------------------------------- */
+/* Login page                                                             */
+/* ---------------------------------------------------------------------- */
 
 .login-page {
   display: flex;
@@ -126,56 +520,47 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  width: 320px;
+  width: 340px;
   padding: 2rem;
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
 }
 
 .login-card h1 {
   margin: 0 0 1rem;
-  font-size: 1.25rem;
+  font-size: var(--text-xl);
   text-align: center;
 }
 
 .login-card label {
-  font-size: 0.85rem;
-  color: #4a4d55;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   margin-top: 0.5rem;
 }
 
 .login-card input {
-  padding: 0.5rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  font-size: 0.95rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-md);
 }
 
 .login-card button {
   margin-top: 1.25rem;
-  padding: 0.6rem;
-  border: none;
-  border-radius: 4px;
-  background: #4f8cff;
-  color: #ffffff;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.login-card button:disabled {
-  background: #a9c4f0;
-  cursor: default;
+  width: 100%;
 }
 
 .login-error {
-  color: #c0341f;
-  font-size: 0.85rem;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
   margin: 0;
 }
 
-/* Dashboard */
+/* ---------------------------------------------------------------------- */
+/* Dashboard                                                              */
+/* ---------------------------------------------------------------------- */
 
 .dashboard-page {
   display: flex;
@@ -190,27 +575,32 @@ body {
 }
 
 .metric-card {
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 1.25rem;
 }
 
 .metric-card-label {
   margin: 0 0 0.4rem;
-  font-size: 0.85rem;
-  color: #6a6d75;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
 }
 
 .metric-card-value {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
 }
 
 .dashboard-section h2 {
   margin: 0 0 0.75rem;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
+  font-weight: 700;
 }
 
 .lot-gauge-grid {
@@ -220,9 +610,10 @@ body {
 }
 
 .lot-gauge {
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 1rem;
 }
 
@@ -233,36 +624,37 @@ body {
 
 .lot-gauge-bar-track {
   height: 8px;
-  border-radius: 4px;
-  background: #e9e9ec;
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
   overflow: hidden;
 }
 
 .lot-gauge-bar-fill {
   height: 100%;
-  background: #4f8cff;
+  background: var(--color-primary);
   transition: width 0.3s ease;
 }
 
 .lot-gauge-occupancy {
   margin: 0.5rem 0 0.25rem;
-  font-size: 0.85rem;
-  color: #4a4d55;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .lot-gauge-revenue {
   margin: 0;
-  font-size: 0.85rem;
-  color: #6a6d75;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .activity-feed {
   list-style: none;
   margin: 0;
   padding: 0;
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .activity-feed-item {
@@ -270,8 +662,8 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f0f0f2;
-  font-size: 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
   gap: 1rem;
 }
 
@@ -290,28 +682,30 @@ body {
 }
 
 .activity-feed-lot-name {
-  color: #6a6d75;
+  color: var(--color-text-muted);
 }
 
 .activity-feed-secondary {
   display: flex;
   align-items: center;
   gap: 1rem;
-  color: #4a4d55;
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .activity-feed-created-at {
-  color: #9a9da5;
+  color: var(--color-text-muted);
   min-width: 3.5rem;
   text-align: right;
 }
 
 .activity-feed-empty {
-  color: #6a6d75;
+  color: var(--color-text-muted);
 }
 
-/* Lots page */
+/* ---------------------------------------------------------------------- */
+/* Lots page                                                              */
+/* ---------------------------------------------------------------------- */
 
 .lots-page {
   display: flex;
@@ -327,6 +721,8 @@ body {
 
 .lots-page-header h2 {
   margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
 }
 
 .lots-page-actions {
@@ -334,132 +730,19 @@ body {
   gap: 0.5rem;
 }
 
-.lots-page-actions button,
-.analytics-page-header button {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  background: #4f8cff;
-  color: #ffffff;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.lots-page-actions button:hover,
-.analytics-page-header button:hover {
-  opacity: 0.9;
-}
-
-.lots-page-actions button:disabled,
-.analytics-page-header button:disabled {
-  background: #a9c4f0;
-  cursor: default;
-}
-
-.lots-table,
-.day-breakdown-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.lots-table th,
-.lots-table td,
-.day-breakdown-table th,
-.day-breakdown-table td {
-  padding: 0.6rem 0.9rem;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f2;
-  font-size: 0.9rem;
-}
-
-.lots-table th,
-.day-breakdown-table th {
-  background: #f7f7f8;
-  color: #4a4d55;
-  font-weight: 600;
-}
-
-.lots-table tr:last-child td,
-.day-breakdown-table tr:last-child td {
-  border-bottom: none;
-}
-
 .lots-table-row-actions {
   display: flex;
   gap: 0.5rem;
 }
 
-.lots-table-row-actions button {
-  padding: 0.3rem 0.6rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.lots-table-row-actions button:hover {
-  background: #f0f0f2;
-}
-
 .lots-table-empty {
-  color: #6a6d75;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.status-badge-active {
-  background: #e3f6ea;
-  color: #1c7d43;
-}
-
-.status-badge-maintenance {
-  background: #fdf0e0;
-  color: #b0631a;
-}
-
-.status-badge-completed {
-  background: #e6eefc;
-  color: #2a5bb8;
-}
-
-.status-badge-cancelled,
-.status-badge-declined {
-  background: #fbe6e4;
-  color: #a3301c;
-}
-
-.status-badge-succeeded {
-  background: #e3f6ea;
-  color: #1c7d43;
-}
-
-.status-badge-refunded {
-  background: #f0eafd;
-  color: #6431c9;
-}
-
-.status-badge-flagged {
-  background: #fbe6e4;
-  color: #a3301c;
-  margin-left: 0.5rem;
+  color: var(--color-text-muted);
 }
 
 .lots-table-row-actions a {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.8rem;
-  color: #4f8cff;
+  padding: 0.35rem 0.6rem;
+  font-size: var(--text-sm);
+  color: var(--color-primary);
   text-decoration: none;
 }
 
@@ -467,12 +750,14 @@ body {
   text-decoration: underline;
 }
 
-/* Modal */
+/* ---------------------------------------------------------------------- */
+/* Modal                                                                  */
+/* ---------------------------------------------------------------------- */
 
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(20, 22, 29, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -484,15 +769,15 @@ body {
   max-width: calc(100vw - 2rem);
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
-  background: #ffffff;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
   padding: 1.5rem;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-modal);
 }
 
 .modal h2 {
   margin: 0 0 1rem;
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
 }
 
 .form-field {
@@ -512,22 +797,23 @@ body {
 }
 
 .form-field label {
-  font-size: 0.85rem;
-  color: #4a4d55;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .form-field input,
 .form-field select {
-  padding: 0.5rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  font-size: 0.9rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-md);
+  font-family: inherit;
 }
 
 .form-error {
   margin: 0;
-  color: #c0341f;
-  font-size: 0.8rem;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
 }
 
 .modal-actions {
@@ -537,33 +823,9 @@ body {
   margin-top: 1rem;
 }
 
-.modal-actions button {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.modal-actions button[type='submit'] {
-  background: #4f8cff;
-  color: #ffffff;
-  border-color: #4f8cff;
-}
-
-.modal-actions button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.danger-button {
-  background: #c0341f !important;
-  color: #ffffff !important;
-  border-color: #c0341f !important;
-}
-
-/* Analytics page */
+/* ---------------------------------------------------------------------- */
+/* Analytics page                                                         */
+/* ---------------------------------------------------------------------- */
 
 .analytics-page {
   display: flex;
@@ -579,28 +841,35 @@ body {
 
 .analytics-page-header h2 {
   margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
 }
 
 .analytics-section h3 {
   margin: 0 0 0.75rem;
-  font-size: 1rem;
+  font-size: var(--text-lg);
+  font-weight: 700;
 }
 
 .chart-wrapper {
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 1rem;
 }
 
 #analytics-day-picker {
   margin: 0 0 0.75rem 0.5rem;
-  padding: 0.4rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
+  padding: 0.45rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
 }
 
-/* Reservations page */
+/* ---------------------------------------------------------------------- */
+/* Reservations page                                                      */
+/* ---------------------------------------------------------------------- */
 
 .reservations-page {
   display: flex;
@@ -610,6 +879,8 @@ body {
 
 .reservations-page-header h2 {
   margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
 }
 
 .reservations-filter-bar {
@@ -617,9 +888,10 @@ body {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 0.75rem;
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 1rem;
 }
 
@@ -636,45 +908,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.9rem;
-  color: #1a1a1a;
-}
-
-.reservations-filter-bar button[type='submit'] {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  background: #4f8cff;
-  color: #ffffff;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.reservations-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.reservations-table th,
-.reservations-table td {
-  padding: 0.6rem 0.9rem;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f2;
-  font-size: 0.9rem;
-}
-
-.reservations-table th {
-  background: #f7f7f8;
-  color: #4a4d55;
-  font-weight: 600;
-}
-
-.reservations-table tr:last-child td {
-  border-bottom: none;
+  font-size: var(--text-md);
+  color: var(--color-text);
 }
 
 .reservations-table-row {
@@ -682,11 +917,11 @@ body {
 }
 
 .reservations-table-row:hover {
-  background: #f7f9ff;
+  background: #f8f9fd;
 }
 
 .reservations-table-empty {
-  color: #6a6d75;
+  color: var(--color-text-muted);
 }
 
 .pagination {
@@ -694,25 +929,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  font-size: 0.9rem;
-  color: #4a4d55;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
 }
 
-.pagination button {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.pagination button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* Reservation detail page */
+/* ---------------------------------------------------------------------- */
+/* Reservation / customer detail pages                                    */
+/* ---------------------------------------------------------------------- */
 
 .reservation-detail-page {
   display: flex;
@@ -728,13 +951,15 @@ body {
 }
 
 .reservation-detail-header a {
-  font-size: 0.85rem;
-  color: #4f8cff;
+  font-size: var(--text-sm);
+  color: var(--color-primary);
   text-decoration: none;
 }
 
 .reservation-detail-header h2 {
   margin: 0.35rem 0 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
 }
 
 .reservation-detail-actions {
@@ -742,25 +967,18 @@ body {
   gap: 0.5rem;
 }
 
-.reservation-detail-actions button {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d6d6da;
-  border-radius: 4px;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
 .detail-card {
-  background: #ffffff;
-  border: 1px solid #e2e2e6;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 1.25rem;
 }
 
 .detail-card h3 {
   margin: 0 0 0.75rem;
-  font-size: 1rem;
+  font-size: var(--text-lg);
+  font-weight: 700;
 }
 
 .detail-grid {
@@ -771,12 +989,12 @@ body {
 }
 
 .detail-grid dt {
-  font-size: 0.8rem;
-  color: #6a6d75;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
   margin-bottom: 0.2rem;
 }
 
 .detail-grid dd {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--text-md);
 }
