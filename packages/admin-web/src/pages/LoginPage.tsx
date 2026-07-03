@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
+import './dashboard.css';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -32,9 +33,14 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
-        <h1>Park N Stuff Admin</h1>
+        <div className="login-brand">
+          <span className="login-brand-mark" aria-hidden="true">
+            P
+          </span>
+          <h1>Park N Stuff Admin</h1>
+        </div>
         {error && (
-          <p className="login-error" role="alert">
+          <p className="login-alert" role="alert">
             {error}
           </p>
         )}

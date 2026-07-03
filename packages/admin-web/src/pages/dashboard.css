@@ -1,0 +1,131 @@
+/* ---------------------------------------------------------------------- */
+/* Dashboard + login polish (Task U3)                                     */
+/*                                                                        */
+/* index.css is frozen after U2 while other pages are polished in         */
+/* parallel, so any new rules this task needs live here instead. Imported */
+/* by DashboardPage and LoginPage only.                                   */
+/* ---------------------------------------------------------------------- */
+
+/* Lot gauges */
+
+.lot-gauge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.lot-gauge-header .lot-gauge-name {
+  margin: 0;
+}
+
+.lot-gauge-pct {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.lot-gauge-pct-success {
+  color: var(--color-success);
+}
+
+.lot-gauge-pct-warning {
+  color: var(--color-warning);
+}
+
+.lot-gauge-pct-danger {
+  color: var(--color-danger);
+}
+
+.lot-gauge-bar-fill.lot-gauge-bar-fill-success {
+  background: var(--color-success);
+}
+
+.lot-gauge-bar-fill.lot-gauge-bar-fill-warning {
+  background: var(--color-warning);
+}
+
+.lot-gauge-bar-fill.lot-gauge-bar-fill-danger {
+  background: var(--color-danger);
+}
+
+.lot-gauge-fraction {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Activity feed */
+
+.activity-feed-primary-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.activity-feed-status-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+}
+
+/* Loading skeletons */
+
+.dashboard-skeleton-lot-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dashboard-skeleton-activity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dashboard-skeleton-activity-row:last-child {
+  border-bottom: none;
+}
+
+/* Login page */
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.login-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.login-brand h1 {
+  margin: 0;
+}
+
+.login-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}

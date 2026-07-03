@@ -5,8 +5,8 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value }: MetricCardProps) {
   return (
-    <div className="metric-card">
-      <p className="metric-card-label">{label}</p>
+    <div className="card metric-card">
+      <p className="card-title">{label}</p>
       <p className="metric-card-value">{value}</p>
     </div>
   );

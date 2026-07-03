@@ -14,9 +14,12 @@ export function ActivityFeed({ reservations }: ActivityFeedProps) {
     <ul className="activity-feed">
       {reservations.slice(0, 10).map((reservation) => (
         <li key={reservation.reservationNumber} className="activity-feed-item">
-          <div className="activity-feed-primary">
-            <span className="activity-feed-reservation-number">{reservation.reservationNumber}</span>
-            <span className="activity-feed-lot-name">{reservation.lotName}</span>
+          <div className="activity-feed-primary-group">
+            <span className="activity-feed-status-dot" aria-hidden="true" />
+            <div className="activity-feed-primary">
+              <span className="activity-feed-reservation-number">{reservation.reservationNumber}</span>
+              <span className="activity-feed-lot-name">{reservation.lotName}</span>
+            </div>
           </div>
           <div className="activity-feed-secondary">
             <span>{formatTimeRange(reservation.startTime, reservation.endTime)}</span>
