@@ -1,10 +1,12 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { ReservationStatus } from '@parking/shared';
+import { Skeleton } from '../components/Skeleton';
 import { useLots } from '../hooks/useLots';
 import { useReservations } from '../hooks/useReservations';
 import { formatCentsAsDollars, formatTimeRange } from '../lib/format';
 import { filtersFromSearchParams, type ReservationFilters } from '../lib/reservations';
+import './reservations.css';
 
 const PAGE_SIZE = 25;
 const STATUS_OPTIONS: ReservationStatus[] = ['active', 'completed', 'cancelled'];
@@ -45,11 +47,11 @@ export function ReservationsPage() {
 
   return (
     <div className="reservations-page">
-      <div className="reservations-page-header">
+      <div className="reservations-page-header page-header">
         <h2>Reservations</h2>
       </div>
 
-      <form className="reservations-filter-bar" onSubmit={handleSearchSubmit}>
+      <form className="reservations-filter-bar card" onSubmit={handleSearchSubmit}>
         <div className="form-field">
           <label htmlFor="filter-lot">Lot</label>
           <select id="filter-lot" value={filters.lotId ?? ''} onChange={handleLotChange}>
@@ -116,15 +118,22 @@ export function ReservationsPage() {
           </label>
         </div>
 
-        <button type="submit">Search</button>
+        <button type="submit" className="btn btn-primary">
+          Search
+        </button>
       </form>
 
-      {reservationsQuery.isLoading && <p>Loading reservations…</p>}
+      {reservationsQuery.isLoading && (
+        <div className="results-skeleton" role="status" aria-label="Loading reservations…">
+          <Skeleton height="2.75rem" />
+          <Skeleton height="2.25rem" count={6} />
+        </div>
+      )}
       {reservationsQuery.isError && <p role="alert">Could not load reservations. Try again.</p>}
 
       {reservationsQuery.data && (
         <>
-          <table className="reservations-table">
+          <table className="reservations-table data-table">
             <thead>
               <tr>
                 <th>Reservation #</th>
@@ -132,7 +141,7 @@ export function ReservationsPage() {
                 <th>Customer</th>
                 <th>Plate</th>
                 <th>Window</th>
-                <th>Cost</th>
+                <th className="num">Cost</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -152,7 +161,7 @@ export function ReservationsPage() {
                   <td>{reservation.customerName}</td>
                   <td>{reservation.licensePlate}</td>
                   <td>{formatTimeRange(reservation.startTime, reservation.endTime)}</td>
-                  <td>{formatCentsAsDollars(reservation.totalCostCents)}</td>
+                  <td className="num">{formatCentsAsDollars(reservation.totalCostCents)}</td>
                   <td>
                     <span className={`status-badge status-badge-${reservation.status}`}>{reservation.status}</span>
                   </td>
@@ -164,13 +173,23 @@ export function ReservationsPage() {
           {rows.length === 0 && <p className="reservations-table-empty">No reservations match these filters.</p>}
 
           <div className="pagination">
-            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
               Previous
             </button>
-            <span>
-              Page {page} of {totalPages} ({total} total)
+            <span className="pagination-summary">
+              Page {page} of {totalPages} &middot; {total} results
             </span>
-            <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
               Next
             </button>
           </div>

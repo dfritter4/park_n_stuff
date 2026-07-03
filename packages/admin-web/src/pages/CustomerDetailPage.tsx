@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { AdminCustomerDetail } from '@parking/shared';
 import { apiFetch } from '../api/client';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Skeleton } from '../components/Skeleton';
 import { CUSTOMERS_QUERY_KEY, CUSTOMER_DETAIL_QUERY_KEY, useCustomerDetail } from '../hooks/useCustomers';
 import { formatCentsAsDollars, formatTimeRange } from '../lib/format';
 import './customers.css';
@@ -67,7 +68,16 @@ export function CustomerDetailPage() {
   }
 
   if (detailQuery.isLoading) {
-    return <p>Loading customer…</p>;
+    return (
+      <div className="customer-detail-page">
+        <div className="detail-skeleton" role="status" aria-label="Loading customer…">
+          <Skeleton height="1.25rem" width="12rem" />
+          <Skeleton height="2rem" width="16rem" />
+          <Skeleton height="9rem" />
+          <Skeleton height="9rem" />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !detailQuery.data) {
@@ -78,19 +88,21 @@ export function CustomerDetailPage() {
 
   return (
     <div className="customer-detail-page">
-      <div className="customer-detail-header">
+      <div className="customer-detail-header page-header">
         <div>
-          <Link to="/customers">&larr; Back to customers</Link>
+          <Link to="/customers" className="btn btn-ghost btn-sm customer-detail-back">
+            &larr; Back to customers
+          </Link>
           <h2>
             {customer.name}
             {customer.flagged && <span className="status-badge status-badge-flagged">Flagged</span>}
           </h2>
         </div>
-        <div className="customer-detail-actions">
+        <div className="customer-detail-actions page-header-actions">
           {customer.flagged ? (
             <button
               type="button"
-              className="danger-button"
+              className="btn btn-danger"
               onClick={() => {
                 unflagMutation.reset();
                 setIsUnflagging(true);
@@ -99,74 +111,77 @@ export function CustomerDetailPage() {
               Unflag customer
             </button>
           ) : (
-            <button type="button" onClick={openFlagDialog}>
+            <button type="button" className="btn btn-primary" onClick={openFlagDialog}>
               Flag customer
             </button>
           )}
         </div>
       </div>
 
-      <section className="detail-card">
-        <h3>Profile</h3>
-        <dl className="detail-grid">
-          <div>
-            <dt>Email</dt>
-            <dd>{customer.email}</dd>
-          </div>
-          <div>
-            <dt>Phone</dt>
-            <dd>{customer.phone}</dd>
-          </div>
-          <div>
-            <dt>Reservations</dt>
-            <dd>{customer.reservationCount}</dd>
-          </div>
-          <div>
-            <dt>Lifetime spend</dt>
-            <dd>{formatCentsAsDollars(customer.lifetimeSpendCents)}</dd>
-          </div>
-          {customer.flagged && customer.flagReason && (
-            <div>
-              <dt>Flag reason</dt>
-              <dd>{customer.flagReason}</dd>
-            </div>
-          )}
-        </dl>
-      </section>
+      {customer.flagged && customer.flagReason && (
+        <div className="flag-reason-callout" role="note">
+          <p className="flag-reason-callout-label">Flag reason</p>
+          <p>{customer.flagReason}</p>
+        </div>
+      )}
 
-      <section className="detail-card">
-        <h3>Reservation history</h3>
-        {customer.reservations.length === 0 ? (
-          <p className="reservations-table-empty">No reservations yet.</p>
-        ) : (
-          <table className="reservations-table">
-            <thead>
-              <tr>
-                <th>Reservation #</th>
-                <th>Lot</th>
-                <th>Window</th>
-                <th>Cost</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customer.reservations.map((reservation) => (
-                <tr key={reservation.id}>
-                  <td>
-                    <Link to={`/reservations/${reservation.id}`}>{reservation.reservationNumber}</Link>
-                  </td>
-                  <td>{reservation.lotName}</td>
-                  <td>{formatTimeRange(reservation.startTime, reservation.endTime)}</td>
-                  <td>{formatCentsAsDollars(reservation.totalCostCents)}</td>
-                  <td>
-                    <span className={`status-badge status-badge-${reservation.status}`}>{reservation.status}</span>
-                  </td>
+      <div className="customer-detail-sections">
+        <section className="detail-card">
+          <h3>Profile</h3>
+          <dl className="detail-grid">
+            <div>
+              <dt>Email</dt>
+              <dd>{customer.email}</dd>
+            </div>
+            <div>
+              <dt>Phone</dt>
+              <dd>{customer.phone}</dd>
+            </div>
+            <div>
+              <dt>Reservations</dt>
+              <dd>{customer.reservationCount}</dd>
+            </div>
+            <div>
+              <dt>Lifetime spend</dt>
+              <dd>{formatCentsAsDollars(customer.lifetimeSpendCents)}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="detail-card customer-detail-history">
+          <h3>Reservation history</h3>
+          {customer.reservations.length === 0 ? (
+            <p className="reservations-table-empty">No reservations yet.</p>
+          ) : (
+            <table className="reservations-table data-table">
+              <thead>
+                <tr>
+                  <th>Reservation #</th>
+                  <th>Lot</th>
+                  <th>Window</th>
+                  <th className="num">Cost</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+              </thead>
+              <tbody>
+                {customer.reservations.map((reservation) => (
+                  <tr key={reservation.id}>
+                    <td>
+                      <Link to={`/reservations/${reservation.id}`}>{reservation.reservationNumber}</Link>
+                    </td>
+                    <td>{reservation.lotName}</td>
+                    <td>{formatTimeRange(reservation.startTime, reservation.endTime)}</td>
+                    <td className="num">{formatCentsAsDollars(reservation.totalCostCents)}</td>
+                    <td>
+                      <span className={`status-badge status-badge-${reservation.status}`}>{reservation.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </div>
 
       {isFlagging && (
         <div className="modal-backdrop" role="presentation">

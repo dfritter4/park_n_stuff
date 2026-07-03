@@ -1,0 +1,47 @@
+/* Reservations + reservation detail pages — additions on top of the U2
+   token/primitive base in index.css (frozen; not editable here). */
+
+.pagination {
+  gap: 1rem;
+}
+
+.pagination-summary {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.results-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Reservation detail page */
+
+.reservation-detail-back {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+}
+
+.reservation-detail-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.reservation-detail-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.reservation-detail-payments {
+  grid-column: 1 / -1;
+}

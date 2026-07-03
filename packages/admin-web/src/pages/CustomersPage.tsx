@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Skeleton } from '../components/Skeleton';
 import { useCustomers } from '../hooks/useCustomers';
 import { formatCentsAsDollars } from '../lib/format';
 import type { CustomerFilters } from '../lib/customers';
@@ -28,11 +29,11 @@ export function CustomersPage() {
 
   return (
     <div className="customers-page">
-      <div className="customers-page-header">
+      <div className="customers-page-header page-header">
         <h2>Customers</h2>
       </div>
 
-      <form className="customers-search-bar" onSubmit={handleSearchSubmit}>
+      <form className="customers-search-bar card" onSubmit={handleSearchSubmit}>
         <div className="form-field">
           <label htmlFor="customer-search">Search</label>
           <input
@@ -42,22 +43,29 @@ export function CustomersPage() {
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
-        <button type="submit">Search</button>
+        <button type="submit" className="btn btn-primary">
+          Search
+        </button>
       </form>
 
-      {customersQuery.isLoading && <p>Loading customers…</p>}
+      {customersQuery.isLoading && (
+        <div className="results-skeleton" role="status" aria-label="Loading customers…">
+          <Skeleton height="2.75rem" />
+          <Skeleton height="2.25rem" count={6} />
+        </div>
+      )}
       {customersQuery.isError && <p role="alert">Could not load customers. Try again.</p>}
 
       {customersQuery.data && (
         <>
-          <table className="reservations-table">
+          <table className="reservations-table data-table">
             <thead>
               <tr>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Phone</th>
-                <th>Reservations</th>
-                <th>Lifetime spend</th>
+                <th className="num">Reservations</th>
+                <th className="num">Lifetime spend</th>
                 <th>Flagged</th>
               </tr>
             </thead>
@@ -71,8 +79,8 @@ export function CustomersPage() {
                   <td>{customer.name}</td>
                   <td>{customer.email}</td>
                   <td>{customer.phone}</td>
-                  <td>{customer.reservationCount}</td>
-                  <td>{formatCentsAsDollars(customer.lifetimeSpendCents)}</td>
+                  <td className="num">{customer.reservationCount}</td>
+                  <td className="num">{formatCentsAsDollars(customer.lifetimeSpendCents)}</td>
                   <td>
                     {customer.flagged ? (
                       <span className="status-badge status-badge-flagged">Flagged</span>
@@ -88,13 +96,23 @@ export function CustomersPage() {
           {rows.length === 0 && <p className="reservations-table-empty">No customers match this search.</p>}
 
           <div className="pagination">
-            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
               Previous
             </button>
-            <span>
-              Page {page} of {totalPages} ({total} total)
+            <span className="pagination-summary">
+              Page {page} of {totalPages} &middot; {total} results
             </span>
-            <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
               Next
             </button>
           </div>
