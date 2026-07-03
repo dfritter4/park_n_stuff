@@ -35,6 +35,21 @@ independent Vite/React single-page apps.
   color palette, spacing/radii/shadows), refined lot cards, form and payment
   styling, a celebratory confirmation receipt, and loading skeletons.
 
+## Phase 3 features
+
+- **Admin UI modernization** — a token-driven design system (CSS custom
+  properties for color/type/shape/elevation), shared primitives (buttons,
+  cards, data tables, status badges, page headers, loading skeletons), inline
+  icons, and a from-the-ground-up visual pass across every admin page
+  (dashboard, lots, reservations, customers, analytics).
+- **Per-lot analytics** — `GET /api/admin/analytics` and
+  `GET /api/admin/analytics/day/:date` accept an optional `lotId` filter so
+  revenue, occupancy, and the day breakdown can be scoped to a single lot; the
+  Analytics page redesign adds a single page-level lot selector that drives
+  every lot-scopable chart (occupancy, revenue, day breakdown, heatmap,
+  forecast). Weekly-compare, lot-compare, and declines stay global by design
+  (they're inherently cross-lot).
+
 ## Architecture
 
 ### Monorepo map
@@ -88,8 +103,8 @@ implementations are wired to application services.
 | GET | `/api/reservations/:id` | none |
 | POST | `/api/admin/auth/login` | none |
 | GET | `/api/admin/dashboard` | admin |
-| GET | `/api/admin/analytics` | admin |
-| GET | `/api/admin/analytics/day/:date` | admin |
+| GET | `/api/admin/analytics?days&lotId` | admin |
+| GET | `/api/admin/analytics/day/:date?lotId` | admin |
 | GET | `/api/admin/analytics/export` | admin |
 | GET | `/api/admin/analytics/heatmap` | admin |
 | GET | `/api/admin/analytics/weekly-compare` | admin |
@@ -110,6 +125,16 @@ Admin routes require a `Bearer` JWT obtained from `/api/admin/auth/login`.
 `GET /api/lots/:id/pricing-rules` is intentionally public (the customer app
 may surface it later); every other pricing/capacity/reservation/customer
 management route is admin-only.
+
+`GET /api/admin/analytics` and `GET /api/admin/analytics/day/:date` accept
+an optional `lotId` (uuid) query param. When present, `dailyRevenue` and the
+day-breakdown revenue column count only that lot's payments, and
+`hourlyOccupancy`/the day-breakdown occupancy column use that lot's capacity
+as the denominator instead of the total across all lots. An unrecognized but
+validly-formed uuid returns a 200 with a zero-valued series (same convention
+as the existing heatmap endpoint); a malformed `lotId` returns 400
+`VALIDATION_ERROR`. Omitting `lotId` preserves the prior all-lots behavior.
+Weekly-compare, lot-compare, and declines are intentionally not lot-scoped.
 
 ## Prerequisites
 
@@ -180,7 +205,7 @@ docker compose up -d db_test
 # Migrate the test database once
 DATABASE_URL=postgres://parking:parking@localhost:5433/parking_test npm run migrate -w @parking/api
 
-# Run every workspace's test suite (509 tests across shared/api/customer-web/admin-web)
+# Run every workspace's test suite (549 tests across shared/api/customer-web/admin-web)
 npm test
 ```
 
