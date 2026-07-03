@@ -119,12 +119,25 @@ export interface DeclinesData {
 
 export interface AnalyticsRepository {
   getDashboardData(): Promise<DashboardData>;
-  /** Last `days` UTC days (inclusive of today), gap-free. */
-  getDailyRevenue(days: number): Promise<DailyRevenuePoint[]>;
-  /** Last 7 UTC days x 24h = 168 gap-free rows, oldest to newest. */
-  getHourlyOccupancy(): Promise<HourlyOccupancyPoint[]>;
-  /** 24 gap-free rows (hour 0-23) for the given UTC date (YYYY-MM-DD). */
-  getDayBreakdown(date: string): Promise<DayBreakdownRow[]>;
+  /**
+   * Last `days` UTC days (inclusive of today), gap-free. When `lotId` is null,
+   * revenue is counted across all lots; when set, only payments for that
+   * lot's reservations are counted.
+   */
+  getDailyRevenue(days: number, lotId: string | null): Promise<DailyRevenuePoint[]>;
+  /**
+   * Last 7 UTC days x 24h = 168 gap-free rows, oldest to newest. When `lotId`
+   * is null the denominator is total non-deleted lot capacity and the
+   * numerator excludes deleted-lot reservations; when set, the denominator is
+   * that lot's capacity and the numerator is scoped to it.
+   */
+  getHourlyOccupancy(lotId: string | null): Promise<HourlyOccupancyPoint[]>;
+  /**
+   * 24 gap-free rows (hour 0-23) for the given UTC date (YYYY-MM-DD). When
+   * `lotId` is set, reservations, revenue, and occupancy are all scoped to
+   * that lot (occupancy denominator becomes that lot's capacity).
+   */
+  getDayBreakdown(date: string, lotId: string | null): Promise<DayBreakdownRow[]>;
   /** All reservations (any status), for CSV export. */
   getExportRows(): Promise<ExportReservationRow[]>;
   /**

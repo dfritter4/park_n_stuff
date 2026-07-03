@@ -34,22 +34,28 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
   requestedLotCompareDays: number[] = [];
   requestedForecastLotIds: string[] = [];
   requestedDeclinesDays: number[] = [];
+  requestedDailyRevenueLotIds: Array<string | null> = [];
+  requestedHourlyOccupancyLotIds: Array<string | null> = [];
+  requestedDayBreakdownLotIds: Array<string | null> = [];
 
   async getDashboardData(): Promise<DashboardData> {
     return this.dashboardData;
   }
 
-  async getDailyRevenue(days: number) {
+  async getDailyRevenue(days: number, lotId: string | null) {
     this.requestedDays.push(days);
+    this.requestedDailyRevenueLotIds.push(lotId);
     return this.dailyRevenue;
   }
 
-  async getHourlyOccupancy() {
+  async getHourlyOccupancy(lotId: string | null) {
+    this.requestedHourlyOccupancyLotIds.push(lotId);
     return this.hourlyOccupancy;
   }
 
-  async getDayBreakdown(date: string) {
+  async getDayBreakdown(date: string, lotId: string | null) {
     this.requestedDates.push(date);
+    this.requestedDayBreakdownLotIds.push(lotId);
     return this.dayBreakdown;
   }
 
@@ -163,6 +169,26 @@ describe('AnalyticsService', () => {
       expect(result.dailyRevenue).toEqual([{ date: '2026-01-01', revenueCents: 500, reservations: 1 }]);
       expect(result.hourlyOccupancy).toEqual([{ date: '2026-01-01', hour: 0, occupancyPct: 10 }]);
     });
+
+    it('passes null to getDailyRevenue and getHourlyOccupancy when no lotId is given', async () => {
+      const repo = new FakeAnalyticsRepository();
+      const service = new AnalyticsService(repo);
+
+      await service.getAnalytics(14);
+
+      expect(repo.requestedDailyRevenueLotIds).toEqual([null]);
+      expect(repo.requestedHourlyOccupancyLotIds).toEqual([null]);
+    });
+
+    it('passes an explicit lotId through to getDailyRevenue and getHourlyOccupancy', async () => {
+      const repo = new FakeAnalyticsRepository();
+      const service = new AnalyticsService(repo);
+
+      await service.getAnalytics(14, 'lot-a');
+
+      expect(repo.requestedDailyRevenueLotIds).toEqual(['lot-a']);
+      expect(repo.requestedHourlyOccupancyLotIds).toEqual(['lot-a']);
+    });
   });
 
   describe('getDayBreakdown', () => {
@@ -175,6 +201,24 @@ describe('AnalyticsService', () => {
 
       expect(repo.requestedDates).toEqual(['2026-01-01']);
       expect(result.rows).toEqual([{ hour: 5, reservations: 2, revenueCents: 300, occupancyPct: 50 }]);
+    });
+
+    it('passes null to the repository when no lotId is given', async () => {
+      const repo = new FakeAnalyticsRepository();
+      const service = new AnalyticsService(repo);
+
+      await service.getDayBreakdown('2026-01-01');
+
+      expect(repo.requestedDayBreakdownLotIds).toEqual([null]);
+    });
+
+    it('passes an explicit lotId through to the repository', async () => {
+      const repo = new FakeAnalyticsRepository();
+      const service = new AnalyticsService(repo);
+
+      await service.getDayBreakdown('2026-01-01', 'lot-a');
+
+      expect(repo.requestedDayBreakdownLotIds).toEqual(['lot-a']);
     });
   });
 

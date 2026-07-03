@@ -434,6 +434,122 @@ describe('admin dashboard + analytics + csv export (integration)', () => {
       expect(tooHigh.status).toBe(400);
       expect(notANumber.status).toBe(400);
     });
+
+    it('scopes dailyRevenue to the given lotId, excluding another lot\'s payments', async () => {
+      const lotA = await insertLot({ name: 'Lot A', capacity: 10 });
+      const lotB = await insertLot({ name: 'Lot B', capacity: 10 });
+      const customer = await insertCustomer('lotid-daily-customer@example.com');
+      const now = new Date();
+
+      const rA = await insertReservation({
+        lotId: lotA.id,
+        customerId: customer,
+        startTime: new Date(now.getTime() - HOUR_MS),
+        endTime: now,
+        status: 'completed',
+        totalCostCents: 1000,
+        createdAt: now,
+      });
+      await insertPayment({ reservationId: rA, amountCents: 1000, status: 'succeeded', createdAt: now });
+
+      const rB = await insertReservation({
+        lotId: lotB.id,
+        customerId: customer,
+        startTime: new Date(now.getTime() - HOUR_MS),
+        endTime: now,
+        status: 'completed',
+        totalCostCents: 500,
+        createdAt: now,
+      });
+      await insertPayment({ reservationId: rB, amountCents: 500, status: 'succeeded', createdAt: now });
+
+      const token = await loginAndGetToken();
+      const res = await request(app)
+        .get(`/api/admin/analytics?days=30&lotId=${lotA.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(AnalyticsResponseSchema.parse(res.body)).toBeTruthy();
+      const todayStr = now.toISOString().slice(0, 10);
+      const todayRow = res.body.dailyRevenue.find((r: { date: string }) => r.date === todayStr);
+      expect(todayRow).toMatchObject({ revenueCents: 1000, reservations: 1 });
+    });
+
+    it("uses the lot's own capacity as the hourlyOccupancy denominator when lotId is given, not fleet-wide capacity", async () => {
+      const lotA = await insertLot({ capacity: 10 });
+      await insertLot({ capacity: 40 });
+      const customer = await insertCustomer('lotid-hourly-customer@example.com');
+      const now = new Date();
+
+      await insertReservation({
+        lotId: lotA.id,
+        customerId: customer,
+        startTime: new Date(now.getTime() - 30 * 60_000),
+        endTime: new Date(now.getTime() + 30 * 60_000),
+        status: 'active',
+        totalCostCents: 100,
+        createdAt: now,
+      });
+
+      const token = await loginAndGetToken();
+      const res = await request(app)
+        .get(`/api/admin/analytics?lotId=${lotA.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(AnalyticsResponseSchema.parse(res.body)).toBeTruthy();
+      const currentDateStr = now.toISOString().slice(0, 10);
+      const currentHour = now.getUTCHours();
+      const currentBucket = res.body.hourlyOccupancy.find(
+        (row: { date: string; hour: number }) => row.date === currentDateStr && row.hour === currentHour,
+      );
+      // 1 occupied / lotA capacity (10) = 10%, not 1 / (10 + 40) fleet-wide = 2%.
+      expect(currentBucket.occupancyPct).toBeCloseTo(10, 5);
+    });
+
+    it('returns 400 VALIDATION_ERROR when lotId is not a valid uuid', async () => {
+      const token = await loginAndGetToken();
+
+      const res = await request(app)
+        .get('/api/admin/analytics?lotId=not-a-uuid')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 200 with zero-valued series for a well-formed but unknown lotId', async () => {
+      const lot = await insertLot({ capacity: 10 });
+      const customer = await insertCustomer('lotid-unknown-customer@example.com');
+      const now = new Date();
+
+      // Reservation exists, but on a different lot than the unknown lotId queried below.
+      const r = await insertReservation({
+        lotId: lot.id,
+        customerId: customer,
+        startTime: new Date(now.getTime() - HOUR_MS),
+        endTime: now,
+        status: 'completed',
+        totalCostCents: 1000,
+        createdAt: now,
+      });
+      await insertPayment({ reservationId: r, amountCents: 1000, status: 'succeeded', createdAt: now });
+
+      const token = await loginAndGetToken();
+      const res = await request(app)
+        .get('/api/admin/analytics?lotId=00000000-0000-0000-0000-000000000000')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(AnalyticsResponseSchema.parse(res.body)).toBeTruthy();
+      for (const row of res.body.dailyRevenue) {
+        expect(row.revenueCents).toBe(0);
+        expect(row.reservations).toBe(0);
+      }
+      for (const row of res.body.hourlyOccupancy) {
+        expect(row.occupancyPct).toBe(0);
+      }
+    });
   });
 
   describe('GET /api/admin/analytics/day/:date', () => {
@@ -525,6 +641,73 @@ describe('admin dashboard + analytics + csv export (integration)', () => {
       const token = await loginAndGetToken();
 
       const res = await request(app).get('/api/admin/analytics/day/not-a-date').set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('scopes reservations, revenue, and occupancy to the given lotId', async () => {
+      const lotA = await insertLot({ capacity: 10 });
+      const lotB = await insertLot({ capacity: 10 });
+      const customer = await insertCustomer('lotid-day-customer@example.com');
+
+      const date = new Date(Date.now() - 2 * 24 * HOUR_MS);
+      const dateStr = date.toISOString().slice(0, 10);
+      const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
+      const hour5Start = new Date(dayStart.getTime() + 5 * HOUR_MS);
+
+      const rA = await insertReservation({
+        lotId: lotA.id,
+        customerId: customer,
+        startTime: new Date(hour5Start.getTime() + 10 * 60_000),
+        endTime: new Date(hour5Start.getTime() + 40 * 60_000),
+        status: 'completed',
+        totalCostCents: 800,
+        createdAt: hour5Start,
+      });
+      await insertPayment({
+        reservationId: rA,
+        amountCents: 800,
+        status: 'succeeded',
+        createdAt: new Date(hour5Start.getTime() + 15 * 60_000),
+      });
+
+      // Lot B reservation overlapping the same hour: must not leak into lot A's scoped numbers.
+      const rB = await insertReservation({
+        lotId: lotB.id,
+        customerId: customer,
+        startTime: new Date(hour5Start.getTime() + 5 * 60_000),
+        endTime: new Date(hour5Start.getTime() + 45 * 60_000),
+        status: 'completed',
+        totalCostCents: 500,
+        createdAt: hour5Start,
+      });
+      await insertPayment({
+        reservationId: rB,
+        amountCents: 500,
+        status: 'succeeded',
+        createdAt: new Date(hour5Start.getTime() + 20 * 60_000),
+      });
+
+      const token = await loginAndGetToken();
+      const res = await request(app)
+        .get(`/api/admin/analytics/day/${dateStr}?lotId=${lotA.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(DayBreakdownResponseSchema.parse(res.body)).toBeTruthy();
+      const hour5 = res.body.rows.find((row: { hour: number }) => row.hour === 5);
+      expect(hour5).toMatchObject({ reservations: 1, revenueCents: 800 });
+      // 1 occupied / lotA capacity (10) = 10%, not 2/10 (combined reservations) nor 1/20 (fleet-wide).
+      expect(hour5.occupancyPct).toBeCloseTo(10, 5);
+    });
+
+    it('returns 400 VALIDATION_ERROR when lotId is not a valid uuid', async () => {
+      const token = await loginAndGetToken();
+
+      const res = await request(app)
+        .get('/api/admin/analytics/day/2026-01-01?lotId=not-a-uuid')
+        .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');

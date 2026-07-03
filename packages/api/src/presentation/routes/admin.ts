@@ -38,7 +38,15 @@ export function createAdminAnalyticsRouter(analyticsService: AnalyticsService, j
       if (!daysResult.success) {
         throw new ValidationError('days must be an integer between 1 and 90');
       }
-      res.json(await analyticsService.getAnalytics(daysResult.data));
+      let lotId: string | undefined;
+      if (req.query.lotId !== undefined) {
+        const lotIdResult = LotIdQuerySchema.safeParse(req.query.lotId);
+        if (!lotIdResult.success) {
+          throw new ValidationError('lotId must be a valid UUID');
+        }
+        lotId = lotIdResult.data;
+      }
+      res.json(await analyticsService.getAnalytics(daysResult.data, lotId));
     } catch (err) {
       next(err);
     }
@@ -50,7 +58,15 @@ export function createAdminAnalyticsRouter(analyticsService: AnalyticsService, j
       if (!dateResult.success) {
         throw new ValidationError(dateResult.error.issues[0]?.message ?? 'Invalid date');
       }
-      res.json(await analyticsService.getDayBreakdown(dateResult.data));
+      let lotId: string | undefined;
+      if (req.query.lotId !== undefined) {
+        const lotIdResult = LotIdQuerySchema.safeParse(req.query.lotId);
+        if (!lotIdResult.success) {
+          throw new ValidationError('lotId must be a valid UUID');
+        }
+        lotId = lotIdResult.data;
+      }
+      res.json(await analyticsService.getDayBreakdown(dateResult.data, lotId));
     } catch (err) {
       next(err);
     }

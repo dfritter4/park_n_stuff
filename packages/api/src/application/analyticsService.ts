@@ -71,17 +71,17 @@ export class AnalyticsService {
     };
   }
 
-  async getAnalytics(days: number): Promise<AnalyticsResponse> {
+  async getAnalytics(days: number, lotId?: string): Promise<AnalyticsResponse> {
     const [dailyRevenue, hourlyOccupancy] = await Promise.all([
-      this.repository.getDailyRevenue(days),
-      this.repository.getHourlyOccupancy(),
+      this.repository.getDailyRevenue(days, lotId ?? null),
+      this.repository.getHourlyOccupancy(lotId ?? null),
     ]);
 
     return { dailyRevenue, hourlyOccupancy };
   }
 
-  async getDayBreakdown(date: string): Promise<DayBreakdownResponse> {
-    const rows = await this.repository.getDayBreakdown(date);
+  async getDayBreakdown(date: string, lotId?: string): Promise<DayBreakdownResponse> {
+    const rows = await this.repository.getDayBreakdown(date, lotId ?? null);
     return { rows };
   }
 

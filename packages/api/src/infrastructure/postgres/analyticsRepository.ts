@@ -134,7 +134,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
     }));
   }
 
-  async getDailyRevenue(days: number): Promise<DailyRevenuePoint[]> {
+  async getDailyRevenue(days: number, lotId: string | null): Promise<DailyRevenuePoint[]> {
     // days.day is cast to text in the SELECT (not returned as a `date`) because node-postgres
     // parses the `date` OID into a JS Date at *local* midnight, which silently shifts the
     // calendar day when the process timezone isn't UTC.
@@ -153,15 +153,17 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
        FROM days
        LEFT JOIN (
          SELECT
-           (created_at AT TIME ZONE 'UTC')::date AS day,
-           SUM(amount_cents) AS revenue_cents,
-           COUNT(DISTINCT reservation_id) AS reservations
+           (payments.created_at AT TIME ZONE 'UTC')::date AS day,
+           SUM(payments.amount_cents) AS revenue_cents,
+           COUNT(DISTINCT payments.reservation_id) AS reservations
          FROM payments
-         WHERE status = 'succeeded'
+         JOIN reservations ON reservations.id = payments.reservation_id
+         WHERE payments.status = 'succeeded'
+           AND ($2::uuid IS NULL OR reservations.lot_id = $2)
          GROUP BY 1
        ) rev ON rev.day = days.day
        ORDER BY days.day`,
-      [days],
+      [days, lotId],
     );
     return result.rows.map((row) => ({
       date: row.day,
@@ -170,7 +172,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
     }));
   }
 
-  async getHourlyOccupancy(): Promise<HourlyOccupancyPoint[]> {
+  async getHourlyOccupancy(lotId: string | null): Promise<HourlyOccupancyPoint[]> {
     const result = await this.pool.query<{ hour_start: Date; occupancy_pct: string | number }>(
       `WITH hours AS (
          SELECT generate_series(
@@ -180,7 +182,9 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
          ) AS hour_start
        ),
        capacity AS (
-         SELECT COALESCE(SUM(capacity), 0) AS total_capacity FROM lots WHERE status != 'deleted'
+         SELECT COALESCE(SUM(capacity), 0) AS total_capacity
+         FROM lots
+         WHERE status != 'deleted' AND ($1::uuid IS NULL OR id = $1)
        )
        SELECT
          hours.hour_start AS hour_start,
@@ -193,9 +197,11 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
          ON reservations.status IN ('active', 'completed')
          AND reservations.start_time < hours.hour_start + interval '1 hour'
          AND reservations.end_time > hours.hour_start
+         AND ($1::uuid IS NULL OR reservations.lot_id = $1)
        LEFT JOIN lots ON lots.id = reservations.lot_id AND lots.status != 'deleted'
        GROUP BY hours.hour_start, capacity.total_capacity
        ORDER BY hours.hour_start`,
+      [lotId],
     );
     return result.rows.map((row) => ({
       date: formatDateFromUtcInstant(row.hour_start),
@@ -204,7 +210,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
     }));
   }
 
-  async getDayBreakdown(date: string): Promise<DayBreakdownRow[]> {
+  async getDayBreakdown(date: string, lotId: string | null): Promise<DayBreakdownRow[]> {
     const result = await this.pool.query<{
       hour: number;
       reservations: string;
@@ -224,20 +230,26 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
          FROM reservations, bounds
          WHERE reservations.start_time >= bounds.day_start
            AND reservations.start_time < bounds.day_start + interval '1 day'
+           AND ($2::uuid IS NULL OR reservations.lot_id = $2)
          GROUP BY 1
        ),
        day_revenue AS (
          SELECT
            EXTRACT(HOUR FROM (payments.created_at AT TIME ZONE 'UTC'))::int AS hour,
            SUM(payments.amount_cents) AS revenue_cents
-         FROM payments, bounds
+         FROM payments
+         JOIN reservations ON reservations.id = payments.reservation_id
+         CROSS JOIN bounds
          WHERE payments.status = 'succeeded'
            AND payments.created_at >= bounds.day_start
            AND payments.created_at < bounds.day_start + interval '1 day'
+           AND ($2::uuid IS NULL OR reservations.lot_id = $2)
          GROUP BY 1
        ),
        capacity AS (
-         SELECT COALESCE(SUM(capacity), 0) AS total_capacity FROM lots WHERE status != 'deleted'
+         SELECT COALESCE(SUM(capacity), 0) AS total_capacity
+         FROM lots
+         WHERE status != 'deleted' AND ($2::uuid IS NULL OR id = $2)
        ),
        day_occupancy AS (
          SELECT hours.hour AS hour, COUNT(lots.id) AS occupied_count
@@ -247,6 +259,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
            ON reservations.status IN ('active', 'completed')
            AND reservations.start_time < bounds.day_start + (hours.hour + 1) * interval '1 hour'
            AND reservations.end_time > bounds.day_start + hours.hour * interval '1 hour'
+           AND ($2::uuid IS NULL OR reservations.lot_id = $2)
          LEFT JOIN lots ON lots.id = reservations.lot_id AND lots.status != 'deleted'
          GROUP BY hours.hour
        )
@@ -263,7 +276,7 @@ export class PostgresAnalyticsRepository implements AnalyticsRepository {
        LEFT JOIN day_occupancy ON day_occupancy.hour = hours.hour
        CROSS JOIN capacity
        ORDER BY hours.hour`,
-      [date],
+      [date, lotId],
     );
     return result.rows.map((row) => ({
       hour: row.hour,
